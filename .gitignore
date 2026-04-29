@@ -31,13 +31,14 @@ Thumbs.db
 dataset/
 external_datasets/
 outputs/
-models/checkpoints/
+models/
 *.pt
 *.pth
 *.h5
 *.pkl
 *.joblib
 *.onnx
+*.task
 
 # Frames extracted from videos (regenerable)
 data_processed/
