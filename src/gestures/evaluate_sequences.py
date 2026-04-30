@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -27,11 +27,19 @@ from tqdm import tqdm
 from .. import config
 from ..data.loader import VideoRecord, discover_gestures
 from ..utils.video import iter_frames, probe
+from .crops import crop_hand
 from .features import FEATURE_DIM, landmarks_to_features
-from .landmarks import HandLandmarkExtractor
+from .landmarks import HandLandmarkExtractor, HandLandmarks
 from .state_machine import (
     FrameEvent, GestureSequenceStateMachine, StateMachineConfig,
 )
+
+
+# A FramePredictor consumes the raw RGB frame and the detected hand and
+# returns (label, confidence). This lets the same evaluation harness drive
+# either the classical SVM (landmarks → features) or the modern CNN
+# (landmarks → bbox → crop → softmax).
+FramePredictor = Callable[[np.ndarray, HandLandmarks], Tuple[str, float]]
 
 
 SEQUENCE_GT = {
@@ -57,20 +65,49 @@ class ClipResult:
     correct: bool
 
 
-def _classify_frame(
-    feats: np.ndarray,
-    model: Pipeline,
-) -> tuple[str, float]:
-    probs = model.predict_proba(feats[None, :])[0]
+def make_classical_predictor(model: Pipeline) -> FramePredictor:
+    """Predictor that turns landmarks into the 74-D feature vector and runs
+    the trained sklearn pipeline (SVM or RF)."""
     classes = list(model.classes_)
-    j = int(np.argmax(probs))
-    return classes[j], float(probs[j])
+
+    def predict(_rgb: np.ndarray, hand: HandLandmarks) -> Tuple[str, float]:
+        feats = landmarks_to_features(hand)
+        probs = model.predict_proba(feats[None, :])[0]
+        j = int(np.argmax(probs))
+        return classes[j], float(probs[j])
+
+    return predict
+
+
+def make_cnn_predictor(
+    model,
+    classes: tuple,
+    input_size: int,
+    *,
+    margin: float = 0.30,
+) -> FramePredictor:
+    """Predictor that crops the hand from the frame and runs the CNN."""
+    # Imported lazily so the classical path doesn't pay torchvision import cost.
+    from .cnn import predict_proba as cnn_predict_proba  # noqa: WPS433
+
+    def predict(rgb: np.ndarray, hand: HandLandmarks) -> Tuple[str, float]:
+        cropped = crop_hand(rgb, hand, out_size=input_size, margin=margin)
+        if cropped is None:
+            return "negative", 1.0
+        crop_rgb, _ = cropped
+        probs = cnn_predict_proba(
+            model, crop_rgb, classes=classes, input_size=input_size,
+        )
+        label, conf = max(probs.items(), key=lambda kv: kv[1])
+        return label, conf
+
+    return predict
 
 
 def evaluate_clip(
     rec: VideoRecord,
     extractor: HandLandmarkExtractor,
-    model: Pipeline,
+    predictor: FramePredictor,
     sm_config: StateMachineConfig,
     *,
     stride: int = 5,
@@ -94,8 +131,7 @@ def evaluate_clip(
             ev = FrameEvent(timestamp_s=timestamp_s, label="negative", confidence=1.0)
         else:
             n_hand += 1
-            feats = landmarks_to_features(hand)
-            label, conf = _classify_frame(feats, model)
+            label, conf = predictor(rgb, hand)
             ev = FrameEvent(timestamp_s=timestamp_s, label=label, confidence=conf)
 
         decision = sm.update(ev)
@@ -118,13 +154,20 @@ def evaluate_clip(
 
 
 def evaluate_all(
-    model: Pipeline,
+    predictor: FramePredictor,
     sm_config: Optional[StateMachineConfig] = None,
     *,
     stride: int = 5,
     resize: tuple = (540, 960),
     progress: bool = True,
 ) -> pd.DataFrame:
+    """Run the full pipeline (MediaPipe + ``predictor`` + state machine) on
+    every sequence-level clip and return a dataframe of clip outcomes.
+
+    ``predictor`` is a ``FramePredictor`` callable; use
+    :func:`make_classical_predictor` for the SVM/RF pipeline or
+    :func:`make_cnn_predictor` for the CNN pipeline.
+    """
     sm_config = sm_config or StateMachineConfig()
     records = [
         r for r in discover_gestures()
@@ -136,7 +179,7 @@ def evaluate_all(
         for rec in iterable:
             rows.append(
                 evaluate_clip(
-                    rec, extractor, model, sm_config,
+                    rec, extractor, predictor, sm_config,
                     stride=stride, resize=resize,
                 )
             )
