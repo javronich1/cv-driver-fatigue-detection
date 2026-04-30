@@ -1,10 +1,11 @@
-"""Generate report-ready figures from the inventory and gesture evaluation
-artefacts (Stages 2 & 3).
+"""Generate report-ready figures from the inventory and evaluation artefacts.
 
 Inputs (must already exist):
     outputs/reports/inventory.csv
     outputs/reports/gesture_sequence_eval_svm.csv
     outputs/reports/gesture_sequence_eval_cnn.csv      (optional)
+    outputs/reports/fatigue_clip_eval_svm.csv          (optional, Stage 4E)
+    outputs/reports/fatigue_clip_eval_rf.csv           (optional, Stage 4E)
 
 Outputs (PNG, written to outputs/figures/):
     dataset_class_counts_gestures.png
@@ -18,6 +19,8 @@ Outputs (PNG, written to outputs/figures/):
     gesture_sequence_per_folder_accuracy_cnn.png       (Stage 3D)
     gesture_sequence_activation_confusion_cnn.png      (Stage 3D)
     gesture_sequence_activation_f1_classical_vs_cnn.png(Stage 3D)
+    fatigue_per_frame_vs_per_clip_macro_f1.png         (Stage 4E)
+    fatigue_clip_confusion_<svm|rf>_<method>.png       (Stage 4E aggregated)
 """
 from __future__ import annotations
 
@@ -220,6 +223,96 @@ def figure_activation_comparison(metrics: Dict[str, Dict[str, float]]) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# 4. Stage 4E: Fatigue per-frame vs per-clip comparison
+# ---------------------------------------------------------------------------
+# Per-frame LOSO results (parsed from outputs/reports/fatigue_classical_loso.txt).
+# Hard-coded so the figure script doesn't have to re-parse the text dump.
+FATIGUE_PER_FRAME = {
+    # macro_F1 per fold
+    "SVM (RBF)":     {"person1": 0.422, "person2": 0.383},
+    "Random Forest": {"person1": 0.523, "person2": 0.480},
+}
+
+FATIGUE_CLASSES = ("alert", "drowsy", "yawning")
+
+
+def _per_clip_macro_f1(clip_csv: Path, pred_col: str) -> Dict[str, float]:
+    """Compute per-fold macro-F1 from a saved fatigue_clip_eval_*.csv."""
+    from sklearn.metrics import f1_score  # local import: optional dep at top
+
+    df = pd.read_csv(clip_csv)
+    out: Dict[str, float] = {}
+    for fold, sub in df.groupby("fold"):
+        # Fold name in the CSV is "test=person1" — strip the prefix.
+        person = fold.replace("test=", "")
+        out[person] = float(f1_score(
+            sub["coarse_label"], sub[pred_col],
+            labels=list(FATIGUE_CLASSES), average="macro", zero_division=0,
+        ))
+    return out
+
+
+def _per_clip_confusion(clip_csv: Path, pred_col: str) -> np.ndarray:
+    """Pooled confusion matrix across folds (rows=true, cols=pred)."""
+    from sklearn.metrics import confusion_matrix
+
+    df = pd.read_csv(clip_csv)
+    return confusion_matrix(
+        df["coarse_label"], df[pred_col], labels=list(FATIGUE_CLASSES),
+    )
+
+
+def figures_fatigue_temporal() -> None:
+    """Per-frame-vs-per-clip macro-F1 + per-clip confusion matrices."""
+    svm_csv = config.REPORTS_DIR / "fatigue_clip_eval_svm.csv"
+    rf_csv = config.REPORTS_DIR / "fatigue_clip_eval_rf.csv"
+    if not (svm_csv.exists() and rf_csv.exists()):
+        print(f"NOTE: missing {svm_csv} or {rf_csv} — "
+              "skipping fatigue temporal figures.")
+        return
+
+    folds = ["person1", "person2"]
+
+    # 4a. Per-frame vs per-clip macro-F1 (mean of two aggregators).
+    series: Dict[str, list] = {}
+    for label, csv in (("SVM (RBF)", svm_csv),
+                       ("Random Forest", rf_csv)):
+        per_frame = FATIGUE_PER_FRAME[label]
+        mean_prob = _per_clip_macro_f1(csv, "pred_mean_prob")
+        win_vote = _per_clip_macro_f1(csv, "pred_window_vote")
+        series[f"{label} — per-frame"] = [per_frame[f] for f in folds]
+        series[f"{label} — clip (mean prob)"] = [mean_prob[f] for f in folds]
+        series[f"{label} — clip (window vote)"] = [win_vote[f] for f in folds]
+
+    plot_grouped_bars(
+        categories=[f"test={f}" for f in folds],
+        series=series,
+        title="Fatigue classifier — per-frame vs per-clip macro-F1 (LOSO)",
+        ylabel="macro-F1",
+        out_path=config.FIGURES_DIR
+                 / "fatigue_per_frame_vs_per_clip_macro_f1.png",
+        ylim=(0, 1),
+        figsize=(11, 5),
+    )
+
+    # 4b. Pooled per-clip confusion matrices (one per model x method).
+    for label, short, csv in (("SVM (RBF)", "svm", svm_csv),
+                              ("Random Forest", "rf", rf_csv)):
+        for method, col in (("mean_prob", "pred_mean_prob"),
+                            ("window_vote", "pred_window_vote")):
+            cm = _per_clip_confusion(csv, col)
+            plot_confusion(
+                cm=cm,
+                classes=list(FATIGUE_CLASSES),
+                title=f"Fatigue per-clip — {label} ({method})  "
+                      f"[pooled across folds]",
+                out_path=config.FIGURES_DIR
+                         / f"fatigue_clip_confusion_{short}_{method}_pooled.png",
+                normalize=False,
+            )
+
+
 def main() -> int:
     config.ensure_dirs()
 
@@ -253,6 +346,9 @@ def main() -> int:
         figure_activation_comparison(activation_metrics)
     else:
         print(f"NOTE: {seq_cnn} not found — skipping CNN comparison figures.")
+
+    # Stage 4E: fatigue per-frame vs per-clip.
+    figures_fatigue_temporal()
 
     print("Figures written to:", config.FIGURES_DIR)
     for p in sorted(config.FIGURES_DIR.glob("*.png")):
