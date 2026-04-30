@@ -195,7 +195,7 @@ def build_gesture_predictor(kind: str):
         return make_classical_predictor(sk_model), probs_fn
     if kind == "cnn":
         from src.gestures.cnn import (
-            CLASSES, DEFAULT_INPUT_SIZE, load_model as load_gesture_cnn,
+            load_model as load_gesture_cnn,
             predict_proba as cnn_predict_proba,
         )
         from src.gestures.crops import crop_hand
@@ -204,21 +204,23 @@ def build_gesture_predictor(kind: str):
             raise FileNotFoundError(
                 f"{path} not found. Run scripts/train_gesture_cnn.py."
             )
-        model = load_gesture_cnn(path)
+        # load_model returns (model, classes, input_size).
+        model, cnn_classes, cnn_input_size = load_gesture_cnn(path)
 
         def probs_fn(rgb, hand):
-            cropped = crop_hand(rgb, hand, out_size=DEFAULT_INPUT_SIZE,
+            cropped = crop_hand(rgb, hand, out_size=cnn_input_size,
                                 margin=0.30)
             if cropped is None:
-                return {c: 0.0 for c in CLASSES} | {"negative": 1.0}
+                return {c: 0.0 for c in cnn_classes} | {"negative": 1.0}
             crop_rgb, _ = cropped
             return cnn_predict_proba(
-                model, crop_rgb, classes=CLASSES, input_size=DEFAULT_INPUT_SIZE,
+                model, crop_rgb,
+                classes=cnn_classes, input_size=cnn_input_size,
             )
 
         return (
-            make_cnn_predictor(model, classes=CLASSES,
-                               input_size=DEFAULT_INPUT_SIZE),
+            make_cnn_predictor(model, classes=cnn_classes,
+                               input_size=cnn_input_size),
             probs_fn,
         )
     raise ValueError(f"Unknown --gesture-model: {kind!r}")
