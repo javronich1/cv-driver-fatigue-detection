@@ -56,6 +56,7 @@ class GestureFrameInfo:
     hand: Optional[HandLandmarks]
     label: Optional[str]
     confidence: Optional[float]
+    probs: Optional[Dict[str, float]] = None
 
 
 @dataclass
@@ -180,9 +181,13 @@ class RealtimeFatigueSystem:
         config: Optional[RealtimeConfig] = None,
         hand_extractor: Optional[HandLandmarkExtractor] = None,
         face_extractor: Optional[FaceLandmarkExtractor] = None,
+        gesture_probs_fn: Optional[Callable[
+            [np.ndarray, HandLandmarks], Dict[str, float]
+        ]] = None,
     ) -> None:
         self.cfg = config or RealtimeConfig()
         self.gesture_predictor = gesture_predictor
+        self.gesture_probs_fn = gesture_probs_fn
         self.fatigue_predictor = fatigue_predictor
         self._hand = hand_extractor or HandLandmarkExtractor(
             static_image_mode=True, max_num_hands=1,
@@ -245,6 +250,11 @@ class RealtimeFatigueSystem:
                 label, conf = self.gesture_predictor(rgb, hand)
                 gesture_info.label = label
                 gesture_info.confidence = conf
+                if self.gesture_probs_fn is not None:
+                    try:
+                        gesture_info.probs = self.gesture_probs_fn(rgb, hand)
+                    except Exception:
+                        gesture_info.probs = None
                 ev = FrameEvent(
                     timestamp_s=timestamp_s, label=label, confidence=conf,
                 )

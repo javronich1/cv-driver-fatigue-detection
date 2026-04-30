@@ -101,6 +101,24 @@ def render_hud(bgr: np.ndarray, outcome: FrameOutcome) -> np.ndarray:
             )
         else:
             _put("hand: —", overlay, (12, 100), color=WHITE, scale=0.55)
+        # Debug: show all class probabilities so user can see what model thinks.
+        if outcome.gesture.probs is not None:
+            order = ("open_palm", "thumbs_up", "negative")
+            colour_for = {
+                "open_palm": (90, 200, 100),
+                "thumbs_up": (90, 200, 100),
+                "negative":  (180, 180, 180),
+            }
+            for i, cls in enumerate(order):
+                p = outcome.gesture.probs.get(cls, 0.0)
+                row_y = 130 + i * 22
+                cv2.rectangle(overlay, (16 + 110, row_y - 12),
+                              (16 + 110 + int(140 * p), row_y),
+                              colour_for.get(cls, (180, 180, 180)), -1)
+                _put(cls, overlay, (16, row_y - 1),
+                     color=WHITE, scale=0.5)
+                _put(f"{p:.2f}", overlay, (16 + 110 + 145, row_y - 1),
+                     color=WHITE, scale=0.5)
 
     # Fatigue panel (bottom-left).
     if outcome.system_state in (SystemState.FATIGUE_MONITOR, SystemState.ALERT):
@@ -158,25 +176,51 @@ def open_source(video_path: Optional[str], cam_index: int) -> cv2.VideoCapture:
 # Main loop
 # ---------------------------------------------------------------------------
 def build_gesture_predictor(kind: str):
+    """Returns (predict_fn, probs_fn). probs_fn returns the full Dict[class,p]."""
     if kind == "svm":
         path = config.MODELS_DIR / "gesture_svm.joblib"
         if not path.exists():
             raise FileNotFoundError(
                 f"{path} not found. Run scripts/train_gesture_classical.py."
             )
-        return make_classical_predictor(load_gesture_classical(path))
+        sk_model = load_gesture_classical(path)
+        from src.gestures.features import landmarks_to_features
+        classes = list(sk_model.classes_)
+
+        def probs_fn(_rgb, hand):
+            feats = landmarks_to_features(hand)
+            p = sk_model.predict_proba(feats[None, :])[0]
+            return {c: float(v) for c, v in zip(classes, p)}
+
+        return make_classical_predictor(sk_model), probs_fn
     if kind == "cnn":
         from src.gestures.cnn import (
             CLASSES, DEFAULT_INPUT_SIZE, load_model as load_gesture_cnn,
+            predict_proba as cnn_predict_proba,
         )
+        from src.gestures.crops import crop_hand
         path = config.MODELS_DIR / "gesture_cnn.pt"
         if not path.exists():
             raise FileNotFoundError(
                 f"{path} not found. Run scripts/train_gesture_cnn.py."
             )
         model = load_gesture_cnn(path)
-        return make_cnn_predictor(model, classes=CLASSES,
-                                  input_size=DEFAULT_INPUT_SIZE)
+
+        def probs_fn(rgb, hand):
+            cropped = crop_hand(rgb, hand, out_size=DEFAULT_INPUT_SIZE,
+                                margin=0.30)
+            if cropped is None:
+                return {c: 0.0 for c in CLASSES} | {"negative": 1.0}
+            crop_rgb, _ = cropped
+            return cnn_predict_proba(
+                model, crop_rgb, classes=CLASSES, input_size=DEFAULT_INPUT_SIZE,
+            )
+
+        return (
+            make_cnn_predictor(model, classes=CLASSES,
+                               input_size=DEFAULT_INPUT_SIZE),
+            probs_fn,
+        )
     raise ValueError(f"Unknown --gesture-model: {kind!r}")
 
 
@@ -220,13 +264,16 @@ def main(argv=None) -> int:
                         help="Skip the OpenCV window (still writes --output).")
     parser.add_argument("--resize-width", type=int, default=720,
                         help="Resize frames to this width (default 720).")
+    parser.add_argument("--lenient", action="store_true",
+                        help="Lower state-machine thresholds (easier to "
+                             "activate; useful for debugging).")
     args = parser.parse_args(argv)
 
     config.ensure_dirs()
     print(f"Gesture model : {args.gesture_model}")
     print(f"Fatigue model : {args.fatigue_model}")
 
-    gesture_pred = build_gesture_predictor(args.gesture_model)
+    gesture_pred, gesture_probs_fn = build_gesture_predictor(args.gesture_model)
     fatigue_pred = build_fatigue_predictor(args.fatigue_model)
 
     cap = open_source(args.video, args.cam)
@@ -234,9 +281,18 @@ def main(argv=None) -> int:
     print(f"Source FPS    : {src_fps:.1f}    "
           f"input={'video' if args.video else f'cam {args.cam}'}")
 
+    sm_cfg = StateMachineConfig()
+    if args.lenient:
+        sm_cfg = StateMachineConfig(
+            min_consecutive=2,
+            min_confidence=0.4,
+            window_s=8.0,
+        )
+        print("LENIENT mode: min_consecutive=2  min_confidence=0.4  "
+              "window_s=8.0")
     rt_cfg = RealtimeConfig(
         target_fps=src_fps if args.video else 30.0,
-        sm_config=StateMachineConfig(),
+        sm_config=sm_cfg,
     )
 
     writer: Optional[cv2.VideoWriter] = None
@@ -248,6 +304,7 @@ def main(argv=None) -> int:
         gesture_predictor=gesture_pred,
         fatigue_predictor=fatigue_pred,
         config=rt_cfg,
+        gesture_probs_fn=gesture_probs_fn,
     ) as system:
         try:
             while True:
