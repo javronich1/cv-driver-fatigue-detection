@@ -269,6 +269,12 @@ def main(argv=None) -> int:
     parser.add_argument("--lenient", action="store_true",
                         help="Lower state-machine thresholds (easier to "
                              "activate; useful for debugging).")
+    parser.add_argument("--alert-confidence", type=float, default=0.55,
+                        help="Min fatigue prob to count as alert-class "
+                             "(default 0.55).")
+    parser.add_argument("--alert-persist", type=float, default=1.5,
+                        help="Seconds in alert class before raising the "
+                             "alarm (default 1.5).")
     args = parser.parse_args(argv)
 
     config.ensure_dirs()
@@ -295,7 +301,11 @@ def main(argv=None) -> int:
     rt_cfg = RealtimeConfig(
         target_fps=src_fps if args.video else 30.0,
         sm_config=sm_cfg,
+        alert_min_confidence=args.alert_confidence,
+        alert_min_persist_s=args.alert_persist,
     )
+    print(f"Alert thresh  : conf>={args.alert_confidence}  "
+          f"persist>={args.alert_persist}s")
 
     writer: Optional[cv2.VideoWriter] = None
     t0 = time.time()
