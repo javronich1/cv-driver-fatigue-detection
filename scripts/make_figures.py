@@ -296,6 +296,42 @@ def figures_fatigue_temporal() -> None:
         figsize=(11, 5),
     )
 
+    # 4c. Stage 5C: classical vs modern (1D temporal-CNN) per-clip macro-F1.
+    cnn_csv = config.REPORTS_DIR / "fatigue_temporal_cnn_clip_eval.csv"
+    if cnn_csv.exists():
+        cnn_f1 = _per_clip_macro_f1(cnn_csv, "pred_temporal_cnn")
+        comparison: Dict[str, list] = {
+            "SVM + window vote (classical)":
+                _per_clip_macro_f1(svm_csv, "pred_window_vote"),
+            "RF + window vote (classical)":
+                _per_clip_macro_f1(rf_csv, "pred_window_vote"),
+            "Temporal-CNN (modern)": cnn_f1,
+        }
+        plot_grouped_bars(
+            categories=[f"test={f}" for f in folds],
+            series={k: [v[f] for f in folds] for k, v in comparison.items()},
+            title="Fatigue per-clip macro-F1 — classical vs modern (LOSO)",
+            ylabel="macro-F1",
+            out_path=config.FIGURES_DIR
+                     / "fatigue_clip_macro_f1_classical_vs_cnn.png",
+            ylim=(0, 1),
+            figsize=(9, 4.5),
+        )
+
+        # 4d. Pooled confusion for the temporal CNN.
+        cm_cnn = _per_clip_confusion(cnn_csv, "pred_temporal_cnn")
+        plot_confusion(
+            cm=cm_cnn,
+            classes=list(FATIGUE_CLASSES),
+            title="Fatigue per-clip — Temporal-CNN [pooled across folds]",
+            out_path=config.FIGURES_DIR
+                     / "fatigue_clip_confusion_temporal_cnn_pooled.png",
+            normalize=False,
+        )
+    else:
+        print(f"NOTE: {cnn_csv} not found — "
+              "skipping classical-vs-modern fatigue figure.")
+
     # 4b. Pooled per-clip confusion matrices (one per model x method).
     for label, short, csv in (("SVM (RBF)", "svm", svm_csv),
                               ("Random Forest", "rf", rf_csv)):
