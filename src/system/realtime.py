@@ -131,6 +131,53 @@ def make_temporal_cnn_predictor(
     return predict
 
 
+def make_heuristic_predictor(
+    *,
+    drowsy_blink_threshold: float = 0.45,
+    yawn_jaw_threshold: float = 0.35,
+) -> FatigueBufferPredictor:
+    """Person-agnostic fatigue scorer based on MediaPipe blendshapes.
+
+    The temporal CNN over-fits to the 2 training subjects' specific face
+    appearance and fails on unseen people. This heuristic side-steps that:
+    blendshapes are normalised per-face by MediaPipe, so the scores below
+    have the same meaning for everyone.
+
+    Logic:
+      * yawning: average ``jawOpen`` over the buffer > ``yawn_jaw_threshold``
+      * drowsy:  average of (``eyeBlinkLeft`` + ``eyeBlinkRight``)/2
+                 over the buffer > ``drowsy_blink_threshold``
+      * alert:   otherwise
+
+    Probabilities are simple soft-normalised continuous scores so the HUD
+    bars still update smoothly.
+    """
+    from ..fatigue.features import FEATURE_NAMES
+    idx_blink_l = FEATURE_NAMES.index("eyeBlinkLeft")
+    idx_blink_r = FEATURE_NAMES.index("eyeBlinkRight")
+    idx_jaw = FEATURE_NAMES.index("jawOpen")
+
+    def predict(buf: np.ndarray) -> Tuple[str, float, Dict[str, float]]:
+        if buf.shape[0] == 0:
+            return FATIGUE_CLASSES[0], 0.0, {c: 0.0 for c in FATIGUE_CLASSES}
+        blink = float((buf[:, idx_blink_l] + buf[:, idx_blink_r]).mean() / 2)
+        jaw = float(buf[:, idx_jaw].mean())
+        # Continuous, bounded "evidence" for each class.
+        drowsy_sig = min(1.0, max(0.0, blink / max(drowsy_blink_threshold, 1e-3)))
+        yawn_sig = min(1.0, max(0.0, jaw / max(yawn_jaw_threshold, 1e-3)))
+        alert_sig = max(0.0, 1.0 - max(drowsy_sig, yawn_sig))
+        total = alert_sig + drowsy_sig + yawn_sig + 1e-6
+        probs = {
+            "alert":   alert_sig / total,
+            "drowsy":  drowsy_sig / total,
+            "yawning": yawn_sig / total,
+        }
+        label = max(probs, key=probs.get)
+        return label, probs[label], probs
+
+    return predict
+
+
 def make_classical_aggregator_predictor(
     sklearn_model,
 ) -> FatigueBufferPredictor:

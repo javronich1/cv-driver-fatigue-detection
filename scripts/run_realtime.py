@@ -42,7 +42,8 @@ from src.gestures.state_machine import State, StateMachineConfig        # noqa: 
 from src.fatigue.classical import load_model as load_fatigue_classical  # noqa: E402
 from src.system.realtime import (                                       # noqa: E402
     FrameOutcome, RealtimeConfig, RealtimeFatigueSystem, SystemState,
-    make_classical_aggregator_predictor, make_temporal_cnn_predictor,
+    make_classical_aggregator_predictor, make_heuristic_predictor,
+    make_temporal_cnn_predictor,
 )
 
 
@@ -244,6 +245,8 @@ def build_fatigue_predictor(kind: str):
         return make_classical_aggregator_predictor(
             load_fatigue_classical(path),
         )
+    if kind == "heuristic":
+        return make_heuristic_predictor()
     raise ValueError(f"Unknown --fatigue-model: {kind!r}")
 
 
@@ -258,7 +261,7 @@ def main(argv=None) -> int:
     parser.add_argument("--gesture-model", choices=("svm", "cnn"),
                         default="svm")
     parser.add_argument("--fatigue-model",
-                        choices=("temporal_cnn", "svm", "rf"),
+                        choices=("temporal_cnn", "svm", "rf", "heuristic"),
                         default="temporal_cnn")
     parser.add_argument("--max-frames", type=int, default=0,
                         help="Stop after N processed frames (0 = no cap).")
