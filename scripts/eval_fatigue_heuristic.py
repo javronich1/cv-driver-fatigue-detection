@@ -43,26 +43,43 @@ from src.utils.plotting import plot_confusion                   # noqa: E402
 
 
 # Same defaults as :func:`make_heuristic_predictor` in src/system/realtime.py.
+# A yawn is episodic — most of the clip is mouth-closed and a few seconds
+# are wide open — so we summarise jawOpen with a high quantile (p90)
+# rather than the mean, and we resolve "yawn vs drowsy" with priority
+# (peak-jaw wins) instead of free competition between continuous scores.
 DEFAULT_DROWSY_BLINK_THRESHOLD = 0.45
-DEFAULT_YAWN_JAW_THRESHOLD = 0.35
+DEFAULT_YAWN_JAW_THRESHOLD = 0.25
+DEFAULT_JAW_QUANTILE = 0.90
 
 
 def heuristic_clip_label(
     blink_mean: float,
-    jaw_mean: float,
+    jaw_peak: float,
     *,
     drowsy_blink_threshold: float,
     yawn_jaw_threshold: float,
 ) -> str:
-    """Mirror of ``make_heuristic_predictor`` but on whole-clip means.
+    """Mirror of ``make_heuristic_predictor`` but on whole-clip aggregates.
 
-    Continuous, bounded "evidence" for each class; argmax decides.
+    Two-stage rule:
+        1. If the peak (high quantile) jawOpen over the buffer crosses
+           ``yawn_jaw_threshold``, label "yawning". A yawn is episodic —
+           wide-open mouth for ~1-3 s of an otherwise closed-mouth clip —
+           so peak, not mean, captures it.
+        2. Otherwise pick between "drowsy" and "alert" by competing
+           continuous scores: ``drowsy_sig = blink_mean / threshold`` vs
+           ``alert_sig = 1 - drowsy_sig``. This is the same soft
+           competition the deployed predictor uses; the effective
+           drowsy-vs-alert boundary is ``threshold/2``, which lets us
+           keep a "high" interpretable threshold while still detecting
+           moderately-elevated blink levels (the per-person2 drowsy
+           clips average blink≈0.40 < 0.45 but well above alert≈0.18).
     """
-    drowsy_sig = min(1.0, max(0.0, blink_mean / max(drowsy_blink_threshold, 1e-3)))
-    yawn_sig = min(1.0, max(0.0, jaw_mean / max(yawn_jaw_threshold, 1e-3)))
-    alert_sig = max(0.0, 1.0 - max(drowsy_sig, yawn_sig))
-    scores = {"alert": alert_sig, "drowsy": drowsy_sig, "yawning": yawn_sig}
-    return max(scores, key=scores.get)
+    if jaw_peak >= yawn_jaw_threshold:
+        return "yawning"
+    drowsy_sig = max(0.0, blink_mean / max(drowsy_blink_threshold, 1e-3))
+    alert_sig = max(0.0, 1.0 - drowsy_sig)
+    return "drowsy" if drowsy_sig >= alert_sig else "alert"
 
 
 def predict_clips(
@@ -70,6 +87,7 @@ def predict_clips(
     *,
     drowsy_blink_threshold: float,
     yawn_jaw_threshold: float,
+    jaw_quantile: float = DEFAULT_JAW_QUANTILE,
 ) -> pd.DataFrame:
     """One row per clip with the heuristic prediction."""
     rows: List[dict] = []
@@ -77,9 +95,10 @@ def predict_clips(
         blink_mean = float(
             (sub["eyeBlinkLeft"].to_numpy() + sub["eyeBlinkRight"].to_numpy()).mean() / 2
         )
-        jaw_mean = float(sub["jawOpen"].mean())
+        jaw_arr = sub["jawOpen"].to_numpy()
+        jaw_peak = float(np.quantile(jaw_arr, jaw_quantile)) if len(jaw_arr) else 0.0
         pred = heuristic_clip_label(
-            blink_mean, jaw_mean,
+            blink_mean, jaw_peak,
             drowsy_blink_threshold=drowsy_blink_threshold,
             yawn_jaw_threshold=yawn_jaw_threshold,
         )
@@ -91,7 +110,7 @@ def predict_clips(
             coarse_label=str(sub["coarse_label"].iloc[0]),
             n_frames=int(len(sub)),
             blink_mean=blink_mean,
-            jaw_mean=jaw_mean,
+            jaw_peak=jaw_peak,
             pred_heuristic=pred,
         ))
     return pd.DataFrame(rows)
@@ -111,6 +130,11 @@ def main(argv=None) -> int:
         "--yawn-jaw-threshold", type=float,
         default=DEFAULT_YAWN_JAW_THRESHOLD,
     )
+    parser.add_argument(
+        "--jaw-quantile", type=float,
+        default=DEFAULT_JAW_QUANTILE,
+        help="Quantile of jawOpen used as the peak signal (default 0.9).",
+    )
     args = parser.parse_args(argv)
 
     config.ensure_dirs()
@@ -125,15 +149,17 @@ def main(argv=None) -> int:
         df,
         drowsy_blink_threshold=args.drowsy_blink_threshold,
         yawn_jaw_threshold=args.yawn_jaw_threshold,
+        jaw_quantile=args.jaw_quantile,
     )
 
     # Per-person and pooled metrics.
     summary_lines = ["=" * 72, "FATIGUE — HEURISTIC PER-CLIP EVAL", "=" * 72]
     summary_lines.append(
-        f"drowsy_blink_threshold = {args.drowsy_blink_threshold}"
+        f"drowsy_blink_threshold = {args.drowsy_blink_threshold}  (mean over buffer)"
     )
     summary_lines.append(
-        f"yawn_jaw_threshold     = {args.yawn_jaw_threshold}"
+        f"yawn_jaw_threshold     = {args.yawn_jaw_threshold}  "
+        f"(quantile {args.jaw_quantile} over buffer)"
     )
     summary_lines.append(f"Total clips            : {len(clip_df)}")
 

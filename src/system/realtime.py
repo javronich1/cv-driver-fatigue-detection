@@ -134,7 +134,8 @@ def make_temporal_cnn_predictor(
 def make_heuristic_predictor(
     *,
     drowsy_blink_threshold: float = 0.45,
-    yawn_jaw_threshold: float = 0.35,
+    yawn_jaw_threshold: float = 0.25,
+    jaw_quantile: float = 0.90,
 ) -> FatigueBufferPredictor:
     """Person-agnostic fatigue scorer based on MediaPipe blendshapes.
 
@@ -143,14 +144,20 @@ def make_heuristic_predictor(
     blendshapes are normalised per-face by MediaPipe, so the scores below
     have the same meaning for everyone.
 
-    Logic:
-      * yawning: average ``jawOpen`` over the buffer > ``yawn_jaw_threshold``
-      * drowsy:  average of (``eyeBlinkLeft`` + ``eyeBlinkRight``)/2
-                 over the buffer > ``drowsy_blink_threshold``
-      * alert:   otherwise
+    Two-stage decision (matches Stage 5D ``eval_fatigue_heuristic.py``):
+      1. Yawn — peak (``jaw_quantile``) ``jawOpen`` over the buffer
+         crosses ``yawn_jaw_threshold``. A yawn is episodic (a 1-3 s
+         burst inside an otherwise closed-mouth window), so the high
+         quantile catches it where the mean dilutes it.
+      2. Drowsy vs alert — soft competition between
+         ``drowsy_sig = blink_mean / drowsy_blink_threshold`` and
+         ``alert_sig = 1 - drowsy_sig``. The effective drowsy-vs-alert
+         boundary is ``drowsy_blink_threshold / 2``, which catches
+         moderately-elevated blink (e.g. our person2 drowsy clips have
+         blink≈0.40 — well above alert≈0.18 but below 0.45).
 
-    Probabilities are simple soft-normalised continuous scores so the HUD
-    bars still update smoothly.
+    Probabilities are normalised continuous scores so the HUD bars
+    still update smoothly.
     """
     from ..fatigue.features import FEATURE_NAMES
     idx_blink_l = FEATURE_NAMES.index("eyeBlinkLeft")
@@ -160,19 +167,27 @@ def make_heuristic_predictor(
     def predict(buf: np.ndarray) -> Tuple[str, float, Dict[str, float]]:
         if buf.shape[0] == 0:
             return FATIGUE_CLASSES[0], 0.0, {c: 0.0 for c in FATIGUE_CLASSES}
-        blink = float((buf[:, idx_blink_l] + buf[:, idx_blink_r]).mean() / 2)
-        jaw = float(buf[:, idx_jaw].mean())
+        blink_mean = float((buf[:, idx_blink_l] + buf[:, idx_blink_r]).mean() / 2)
+        jaw_peak = float(np.quantile(buf[:, idx_jaw], jaw_quantile))
         # Continuous, bounded "evidence" for each class.
-        drowsy_sig = min(1.0, max(0.0, blink / max(drowsy_blink_threshold, 1e-3)))
-        yawn_sig = min(1.0, max(0.0, jaw / max(yawn_jaw_threshold, 1e-3)))
-        alert_sig = max(0.0, 1.0 - max(drowsy_sig, yawn_sig))
-        total = alert_sig + drowsy_sig + yawn_sig + 1e-6
-        probs = {
-            "alert":   alert_sig / total,
-            "drowsy":  drowsy_sig / total,
-            "yawning": yawn_sig / total,
-        }
-        label = max(probs, key=probs.get)
+        drowsy_sig = min(1.0, max(0.0, blink_mean / max(drowsy_blink_threshold, 1e-3)))
+        yawn_sig = min(1.0, max(0.0, jaw_peak / max(yawn_jaw_threshold, 1e-3)))
+        alert_sig = max(0.0, 1.0 - drowsy_sig)
+        # Two-stage decision: yawn first (peak signal), then drowsy/alert
+        # by argmax of the soft competition.
+        if yawn_sig >= 1.0:
+            label = "yawning"
+        else:
+            label = "drowsy" if drowsy_sig >= alert_sig else "alert"
+        # HUD probabilities — keep all three so the bars are informative.
+        # When yawning fires, give it dominant mass; otherwise share
+        # mass between drowsy and alert.
+        if label == "yawning":
+            scores = {"alert": 0.0, "drowsy": drowsy_sig, "yawning": yawn_sig}
+        else:
+            scores = {"alert": alert_sig, "drowsy": drowsy_sig, "yawning": yawn_sig}
+        total = sum(scores.values()) + 1e-6
+        probs = {c: v / total for c, v in scores.items()}
         return label, probs[label], probs
 
     return predict
