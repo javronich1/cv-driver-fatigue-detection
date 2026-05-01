@@ -102,6 +102,14 @@ def _fatigue_temporal_cnn_summary() -> Dict[str, float]:
     return _fatigue_clip_metrics(csv_path, "pred_temporal_cnn")
 
 
+def _fatigue_heuristic_summary() -> Dict[str, float]:
+    csv_path = config.REPORTS_DIR / "fatigue_clip_eval_heuristic.csv"
+    if not csv_path.exists():
+        return {"mean_accuracy": float("nan"), "mean_macro_f1": float("nan"),
+                "by_fold": {}}
+    return _fatigue_clip_metrics(csv_path, "pred_heuristic")
+
+
 # ---------------------------------------------------------------------------
 # Report builders
 # ---------------------------------------------------------------------------
@@ -221,6 +229,23 @@ def fatigue_section() -> Tuple[str, List[str]]:
             f"acc={cnn['mean_accuracy']:.3f}  "
             f"F1={cnn['mean_macro_f1']:.3f}"
         )
+    heur = _fatigue_heuristic_summary()
+    if heur["by_fold"]:
+        bf = heur["by_fold"]
+        md.append(
+            f"| **Heuristic (rule-based)** | "
+            f"{bf['person1']['accuracy']:.3f} | "
+            f"{bf['person2']['accuracy']:.3f} | "
+            f"{bf['person1']['macro_f1']:.3f} | "
+            f"{bf['person2']['macro_f1']:.3f} | "
+            f"{heur['mean_accuracy']:.3f} | "
+            f"**{heur['mean_macro_f1']:.3f}** |"
+        )
+        plain.append(
+            f"  {'Heuristic (rule-based)':22s}  "
+            f"acc={heur['mean_accuracy']:.3f}  "
+            f"F1={heur['mean_macro_f1']:.3f}"
+        )
     md.append("")
     return "\n".join(md), plain
 
@@ -277,6 +302,18 @@ def headline_section() -> Tuple[str, List[str]]:
             f"acc={cnn['mean_accuracy']:.3f}  "
             f"F1={cnn['mean_macro_f1']:.3f}"
         )
+    heur = _fatigue_heuristic_summary()
+    if heur["by_fold"]:
+        md.append(
+            f"| Heuristic (rule-based) | "
+            f"{heur['mean_accuracy']:.3f} | "
+            f"{heur['mean_macro_f1']:.3f} |"
+        )
+        plain.append(
+            f"  {'Heuristic (rule-based)':32s}  "
+            f"acc={heur['mean_accuracy']:.3f}  "
+            f"F1={heur['mean_macro_f1']:.3f}"
+        )
 
     md.append("")
     return "\n".join(md), plain
@@ -318,6 +355,13 @@ def main() -> int:
         "* Fatigue per-clip aggregations follow Stage 4D — `mean_prob` is "
         "the argmax of the average per-frame softmax; `window_vote` is "
         "rolling-window majority on argmax.\n"
+        "* The **heuristic baseline** is data-free: it thresholds the "
+        "MediaPipe face-relative blendshapes `eyeBlink{Left,Right}` and "
+        "`jawOpen` averaged over the buffer (see "
+        "`make_heuristic_predictor` in `src/system/realtime.py`). It is "
+        "evaluated on the same per-person clip splits for direct "
+        "comparison with the trained models — there is no LOSO training "
+        "step because there are no parameters to fit.\n"
     )
 
     out_md = config.REPORTS_DIR / "summary.md"

@@ -296,8 +296,10 @@ def figures_fatigue_temporal() -> None:
         figsize=(11, 5),
     )
 
-    # 4c. Stage 5C: classical vs modern (1D temporal-CNN) per-clip macro-F1.
+    # 4c. Stage 5C: classical vs modern (1D temporal-CNN) per-clip macro-F1,
+    #     plus the data-free heuristic baseline (Stage 5D) when available.
     cnn_csv = config.REPORTS_DIR / "fatigue_temporal_cnn_clip_eval.csv"
+    heur_csv = config.REPORTS_DIR / "fatigue_clip_eval_heuristic.csv"
     if cnn_csv.exists():
         cnn_f1 = _per_clip_macro_f1(cnn_csv, "pred_temporal_cnn")
         comparison: Dict[str, list] = {
@@ -307,15 +309,19 @@ def figures_fatigue_temporal() -> None:
                 _per_clip_macro_f1(rf_csv, "pred_window_vote"),
             "Temporal-CNN (modern)": cnn_f1,
         }
+        if heur_csv.exists():
+            comparison["Heuristic (rule-based)"] = (
+                _per_clip_macro_f1(heur_csv, "pred_heuristic")
+            )
         plot_grouped_bars(
             categories=[f"test={f}" for f in folds],
             series={k: [v[f] for f in folds] for k, v in comparison.items()},
-            title="Fatigue per-clip macro-F1 — classical vs modern (LOSO)",
+            title="Fatigue per-clip macro-F1 — classical vs modern vs heuristic (LOSO)",
             ylabel="macro-F1",
             out_path=config.FIGURES_DIR
                      / "fatigue_clip_macro_f1_classical_vs_cnn.png",
             ylim=(0, 1),
-            figsize=(9, 4.5),
+            figsize=(10, 4.5),
         )
 
         # 4d. Pooled confusion for the temporal CNN.
@@ -331,6 +337,18 @@ def figures_fatigue_temporal() -> None:
     else:
         print(f"NOTE: {cnn_csv} not found — "
               "skipping classical-vs-modern fatigue figure.")
+
+    # 4e. Pooled confusion for the heuristic baseline (Stage 5D).
+    if heur_csv.exists():
+        cm_heur = _per_clip_confusion(heur_csv, "pred_heuristic")
+        plot_confusion(
+            cm=cm_heur,
+            classes=list(FATIGUE_CLASSES),
+            title="Fatigue per-clip — Heuristic [pooled across folds]",
+            out_path=config.FIGURES_DIR
+                     / "fatigue_clip_confusion_heuristic_pooled.png",
+            normalize=False,
+        )
 
     # 4b. Pooled per-clip confusion matrices (one per model x method).
     for label, short, csv in (("SVM (RBF)", "svm", svm_csv),
