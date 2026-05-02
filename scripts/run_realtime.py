@@ -42,7 +42,8 @@ from src.gestures.state_machine import State, StateMachineConfig        # noqa: 
 from src.fatigue.classical import load_model as load_fatigue_classical  # noqa: E402
 from src.system.realtime import (                                       # noqa: E402
     FrameOutcome, RealtimeConfig, RealtimeFatigueSystem, SystemState,
-    make_classical_aggregator_predictor, make_heuristic_predictor,
+    make_aggregate_classifier_predictor, make_classical_aggregator_predictor,
+    make_ensemble_predictor, make_heuristic_predictor,
     make_temporal_cnn_predictor,
 )
 
@@ -247,6 +248,29 @@ def build_fatigue_predictor(kind: str):
         )
     if kind == "heuristic":
         return make_heuristic_predictor()
+    if kind == "aggregate_clf":
+        path = config.MODELS_DIR / "fatigue_aggregate.joblib"
+        if not path.exists():
+            raise FileNotFoundError(
+                f"{path} not found. "
+                "Run scripts/train_fatigue_aggregate.py."
+            )
+        return make_aggregate_classifier_predictor(path)
+    if kind == "ensemble":
+        # Stage 5F deployment ensemble: heuristic + aggregate-classifier.
+        # Picked because they make complementary errors on LOSO (heuristic
+        # wins on person2, aggregate-clf wins on person1) so probability
+        # averaging beats either alone — see fatigue_clip_eval_ensemble.csv.
+        agg_path = config.MODELS_DIR / "fatigue_aggregate.joblib"
+        if not agg_path.exists():
+            raise FileNotFoundError(
+                f"{agg_path} not found. "
+                "Run scripts/train_fatigue_aggregate.py first."
+            )
+        return make_ensemble_predictor([
+            make_heuristic_predictor(),
+            make_aggregate_classifier_predictor(agg_path),
+        ])
     raise ValueError(f"Unknown --fatigue-model: {kind!r}")
 
 
@@ -261,8 +285,16 @@ def main(argv=None) -> int:
     parser.add_argument("--gesture-model", choices=("svm", "cnn"),
                         default="svm")
     parser.add_argument("--fatigue-model",
-                        choices=("temporal_cnn", "svm", "rf", "heuristic"),
-                        default="temporal_cnn")
+                        choices=("temporal_cnn", "svm", "rf",
+                                 "heuristic", "aggregate_clf", "ensemble"),
+                        default="aggregate_clf",
+                        help="Fatigue predictor. Default: aggregate_clf "
+                             "(Stage 5E — clip-aggregate RF; LOSO mean "
+                             "macro-F1 0.876, the best trained model). "
+                             "Use 'heuristic' for the data-free baseline "
+                             "(F1 0.877), 'ensemble' for the documented "
+                             "blend (F1 0.866 — slightly worse, kept for "
+                             "ablation).")
     parser.add_argument("--max-frames", type=int, default=0,
                         help="Stop after N processed frames (0 = no cap).")
     parser.add_argument("--no-display", action="store_true",

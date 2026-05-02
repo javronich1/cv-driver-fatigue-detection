@@ -114,7 +114,22 @@ def _pad_or_truncate(x: np.ndarray, target_len: int) -> Tuple[np.ndarray, int]:
 
 
 class FatigueSequenceDataset(Dataset):
-    """In-memory dataset of fixed-length feature sequences."""
+    """In-memory dataset of fixed-length feature sequences.
+
+    Optional augmentations (only applied when ``training=True``):
+
+    * ``augment_noise_std`` — Gaussian noise added to standardised features
+      on real (non-padding) frames. Acts as input-space dropout that
+      mimics MediaPipe blendshape jitter and small face-tracking error.
+    * ``augment_time_shift`` — random temporal crop offset (in frames)
+      drawn from ``[-shift, +shift]`` before pad/truncate. Simulates the
+      temporal alignment slack the realtime ring-buffer has anyway.
+    * ``augment_feature_dropout`` — probability that a single feature
+      channel is zeroed out for the whole clip (channel dropout, like
+      occluded landmarks).
+
+    These are no-ops at eval time so test/LOSO numbers stay clean.
+    """
 
     def __init__(
         self,
@@ -123,6 +138,11 @@ class FatigueSequenceDataset(Dataset):
         seq_len: int = SEQ_LEN,
         feature_mean: Optional[np.ndarray] = None,
         feature_std: Optional[np.ndarray] = None,
+        training: bool = False,
+        augment_noise_std: float = 0.0,
+        augment_time_shift: int = 0,
+        augment_feature_dropout: float = 0.0,
+        rng_seed: int = 0,
     ) -> None:
         self.sequences = sequences
         self.seq_len = seq_len
@@ -133,17 +153,57 @@ class FatigueSequenceDataset(Dataset):
                      else np.zeros(FEATURE_DIM, dtype=np.float32))
         self.std = (feature_std if feature_std is not None
                     else np.ones(FEATURE_DIM, dtype=np.float32))
+        self.training = bool(training)
+        self.augment_noise_std = float(augment_noise_std)
+        self.augment_time_shift = int(augment_time_shift)
+        self.augment_feature_dropout = float(augment_feature_dropout)
+        # One RNG per dataset instance (CPU side; cheap; deterministic).
+        self._rng = np.random.default_rng(rng_seed)
 
     def __len__(self) -> int:
         return len(self.sequences)
 
+    def _maybe_time_shift(self, feats: np.ndarray) -> np.ndarray:
+        """Random temporal crop/shift on the raw frames before pad/trunc."""
+        if not self.training or self.augment_time_shift <= 0:
+            return feats
+        T = feats.shape[0]
+        if T <= 2:
+            return feats
+        max_shift = min(self.augment_time_shift, T // 2)
+        if max_shift <= 0:
+            return feats
+        shift = int(self._rng.integers(-max_shift, max_shift + 1))
+        if shift > 0:
+            # Drop first `shift` frames → effectively starts later.
+            return feats[shift:]
+        if shift < 0:
+            # Drop last `|shift|` frames → effectively ends earlier.
+            return feats[:shift]
+        return feats
+
     def __getitem__(self, idx: int):
         s = self.sequences[idx]
-        x, real_len = _pad_or_truncate(s.features, self.seq_len)
+        feats = self._maybe_time_shift(s.features)
+        x, real_len = _pad_or_truncate(feats, self.seq_len)
         x = (x - self.mean) / np.maximum(self.std, 1e-6)
         # Mask: 1 for real frames, 0 for padding.
         mask = np.zeros(self.seq_len, dtype=np.float32)
-        mask[:min(real_len, self.seq_len)] = 1.0
+        n_real = min(real_len, self.seq_len)
+        mask[:n_real] = 1.0
+        if self.training:
+            # Gaussian feature jitter on real frames only (padding stays 0).
+            if self.augment_noise_std > 0.0 and n_real > 0:
+                noise = self._rng.standard_normal(
+                    size=(n_real, x.shape[1])
+                ).astype(np.float32) * self.augment_noise_std
+                x[:n_real] = x[:n_real] + noise
+            # Channel dropout — simulates a feature briefly going bad.
+            if self.augment_feature_dropout > 0.0:
+                drop_mask = (self._rng.random(x.shape[1])
+                             < self.augment_feature_dropout)
+                if drop_mask.any():
+                    x[:, drop_mask] = 0.0
         # (F, T) layout for Conv1d.
         x_chw = x.T.astype(np.float32)
         y = LABEL_TO_IDX[s.coarse_label]
@@ -303,13 +363,25 @@ def train_one_fold(
     weight_decay: float = 1e-4,
     device: Optional[torch.device] = None,
     verbose: bool = True,
+    augment_noise_std: float = 0.0,
+    augment_time_shift: int = 0,
+    augment_feature_dropout: float = 0.0,
+    aug_seed: int = 0,
 ) -> TemporalFoldResult:
     device = device or best_device()
     mean, std = fit_feature_stats(train_seqs)
-    train_ds = FatigueSequenceDataset(train_seqs, seq_len=seq_len,
-                                      feature_mean=mean, feature_std=std)
+    train_ds = FatigueSequenceDataset(
+        train_seqs, seq_len=seq_len,
+        feature_mean=mean, feature_std=std,
+        training=True,
+        augment_noise_std=augment_noise_std,
+        augment_time_shift=augment_time_shift,
+        augment_feature_dropout=augment_feature_dropout,
+        rng_seed=aug_seed,
+    )
     test_ds = FatigueSequenceDataset(test_seqs, seq_len=seq_len,
-                                     feature_mean=mean, feature_std=std)
+                                     feature_mean=mean, feature_std=std,
+                                     training=False)
     sampler = _make_balanced_sampler(train_seqs)
     train_loader = DataLoader(train_ds, batch_size=batch_size,
                               sampler=sampler, num_workers=0)
@@ -400,6 +472,9 @@ def evaluate_loso(
     seed: int = 42,
     device: Optional[torch.device] = None,
     verbose: bool = True,
+    augment_noise_std: float = 0.0,
+    augment_time_shift: int = 0,
+    augment_feature_dropout: float = 0.0,
 ) -> Tuple[List[TemporalFoldResult], pd.DataFrame]:
     """Leave-one-person-out across the 2 subjects."""
     torch.manual_seed(seed)
@@ -423,6 +498,10 @@ def evaluate_loso(
             train_seqs, test_seqs,
             seq_len=seq_len, epochs=epochs, batch_size=batch_size, lr=lr,
             device=device, verbose=verbose,
+            augment_noise_std=augment_noise_std,
+            augment_time_shift=augment_time_shift,
+            augment_feature_dropout=augment_feature_dropout,
+            aug_seed=seed,
         )
         r.clip_preds["fold"] = f"test={held_out}"
         all_preds.append(r.clip_preds)
@@ -441,6 +520,9 @@ def fit_on_all(
     lr: float = 1e-3,
     seed: int = 42,
     device: Optional[torch.device] = None,
+    augment_noise_std: float = 0.0,
+    augment_time_shift: int = 0,
+    augment_feature_dropout: float = 0.0,
 ) -> Tuple[TemporalCNN, np.ndarray, np.ndarray]:
     """Refit on all data; returns (model, feature_mean, feature_std) so the
     caller can persist the normalisation stats alongside the weights."""
@@ -449,8 +531,15 @@ def fit_on_all(
     device = device or best_device()
     sequences = build_clip_sequences(df)
     mean, std = fit_feature_stats(sequences)
-    ds = FatigueSequenceDataset(sequences, seq_len=seq_len,
-                                feature_mean=mean, feature_std=std)
+    ds = FatigueSequenceDataset(
+        sequences, seq_len=seq_len,
+        feature_mean=mean, feature_std=std,
+        training=True,
+        augment_noise_std=augment_noise_std,
+        augment_time_shift=augment_time_shift,
+        augment_feature_dropout=augment_feature_dropout,
+        rng_seed=seed,
+    )
     sampler = _make_balanced_sampler(sequences)
     loader = DataLoader(ds, batch_size=batch_size, sampler=sampler,
                         num_workers=0)

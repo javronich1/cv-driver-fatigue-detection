@@ -1,97 +1,237 @@
 # Driver Fatigue Detection with Gesture-Based Activation
 
-Computer vision system that monitors driver fatigue, but only after the driver
-performs a predefined gesture sequence to activate it. Built for the final
-Computer Vision course project.
+Computer-vision system that monitors driver fatigue, but only after the driver
+performs a predefined gesture sequence to activate it. Final project for the
+Computer Vision course.
 
 ## What this project does
 
 1. Camera watches the driver. System is **inactive** by default.
-2. Driver performs gesture sequence: **open palm → thumbs up** within a time window.
-3. Once activated, the system monitors for fatigue cues:
-   - Eye closure / blink duration (EAR)
-   - Yawning (MAR)
-   - Head pose (nodding, tilting)
-   - General fatigue facial expression
-4. When fatigue persists, an alert is triggered.
+2. Driver performs gesture sequence: **open palm → thumbs up** within a time
+   window. A state machine on top of a per-frame gesture classifier handles the
+   activation.
+3. Once activated, a face-feature predictor classifies the driver as
+   **alert / drowsy / yawning** from the last few seconds of MediaPipe
+   blendshapes (eye blink, look-down, jaw, head pose, mouth aspect ratio).
+4. Persistent drowsiness or yawning triggers an on-screen alert overlay.
 
-## Approach: Hybrid pipeline
+## Approach — hybrid (classical + modern) pipelines
 
-We implement and compare **two** pipelines:
+We implement two pipelines for **each** task and compare them head-to-head on
+leave-one-person-out (LOSO) cross-validation:
 
-| Component        | Classical                                    | Modern                                  |
-|------------------|----------------------------------------------|-----------------------------------------|
-| Hand detection   | MediaPipe Hands                              | MediaPipe Hands                         |
-| Gesture classify | Hand-landmark features + SVM / Random Forest | CNN on hand crops                       |
-| Face landmarks   | MediaPipe FaceMesh                           | MediaPipe FaceMesh                      |
-| Fatigue cues     | EAR + MAR + head-pose thresholds + RF        | CNN-LSTM on frame sequences             |
-| Sequence logic   | State machine (same for both)                | State machine (same for both)           |
+| Component         | Classical                                          | Modern                                       |
+|-------------------|----------------------------------------------------|----------------------------------------------|
+| Hand detection    | MediaPipe Hands                                    | MediaPipe Hands                              |
+| Gesture classify  | 21-landmark feature vector + SVM / Random Forest   | MobileNetV3-Small CNN on 96×96 hand crops    |
+| Face landmarks    | MediaPipe FaceLandmarker (blendshapes + pose)      | MediaPipe FaceLandmarker                     |
+| Fatigue classify  | Per-frame SVM / RF + clip aggregation              | 1D Temporal-CNN on per-frame feature seqs    |
+| Activation logic  | State machine (same for both)                      | State machine (same for both)                |
 
-Both pipelines run on the same dataset and are compared head-to-head in the report.
+In addition to the trained pipelines we ship two baselines for the fatigue
+task:
+
+* **Heuristic** — data-free rule on `eyeBlink{Left,Right}` mean and `jawOpen`
+  90th percentile (no parameters fit on our data).
+* **Aggregate-clf** — small Random Forest over 15 hand-engineered clip-level
+  statistics (Stage 5E). Used as the **deployment default** because it is the
+  best *trained* model and produces calibrated probabilities suitable for an
+  alert threshold.
+* **Ensemble** — 50/50 probability blend of heuristic + aggregate-clf. Shipped
+  but not selected as the default (LOSO numbers below).
+
+## Final LOSO results
+
+Leave-one-person-out across the 2 subjects, mean unweighted across folds. Full
+breakdown in `outputs/reports/summary.md`.
+
+### Gesture activation (end-to-end, with state machine)
+
+| Pipeline                          | Precision | Recall | F1     | Accuracy |
+|-----------------------------------|----------:|-------:|-------:|---------:|
+| **Classical (SVM + state machine)** | 0.788     | 0.867  | **0.825** | 0.927    |
+| Modern (CNN + state machine)      | 0.719     | 0.767  | 0.742  | 0.893    |
+
+→ Classical wins on this task. The per-frame CNN underperforms because the
+hand-crop dataset is too small for a 1.7M-param network and per-frame label
+noise dominates.
+
+### Fatigue detection (per-clip macro-F1)
+
+| Model                              | acc p1 | acc p2 | F1 p1 | F1 p2 | mean acc | mean F1 |
+|------------------------------------|-------:|-------:|------:|------:|---------:|--------:|
+| RF + window-vote (classical)       | 0.776  | 0.610  | 0.527 | 0.482 | 0.693    | 0.504   |
+| Temporal-CNN (modern, augmented)   | 0.869  | 0.819  | 0.866 | 0.793 | 0.844    | 0.830   |
+| Heuristic (rule-based, data-free)  | 0.897  | 0.876  | 0.893 | 0.862 | 0.887    | **0.877** |
+| **Aggregate-clf (deployment)**     | 0.935  | 0.819  | 0.935 | 0.817 | 0.877    | **0.876** |
+| Ensemble (heur + agg-clf)          | 0.916  | 0.800  | 0.903 | 0.782 | 0.858    | 0.843   |
+
+Key findings:
+
+* Adding **clip-level temporal aggregation** is what closes the gap — the
+  per-frame classical model scores F1=0.504, but giving any model 15 summary
+  statistics over a clip pushes it past 0.87.
+* The **augmented temporal CNN** (Gaussian feature noise + temporal jitter +
+  channel dropout, all train-time only) jumps from F1=0.714 → 0.830 over the
+  un-augmented baseline.
+* The data-free heuristic edges out the trained models by a hair on macro-F1
+  and is impossible to overfit, so we keep it as a sanity check; the
+  aggregate-clf matches it on F1 with smoother probabilities and is the
+  default for the realtime demo.
+
+### Figures
+
+All figures are auto-regenerated by `scripts/make_figures.py`:
+
+* `outputs/figures/fatigue_clip_macro_f1_classical_vs_cnn.png` — five-way
+  per-clip F1 comparison
+* `outputs/figures/fatigue_clip_confusion_aggregate_pooled.png` — pooled
+  confusion for the deployment model
+* `outputs/figures/fatigue_clip_confusion_temporal_cnn_pooled.png` — modern
+  CNN, augmented
+* `outputs/figures/gesture_sequence_activation_f1_classical_vs_cnn.png` —
+  end-to-end gesture activation
+* `outputs/figures/dataset_class_counts_*.png` —
+  dataset distributions
+
+## Setup
+
+Requires **Python 3.12** on macOS (tested on Apple Silicon M3 with MPS).
+
+```bash
+git clone https://github.com/javronich1/cv-driver-fatigue-detection.git
+cd cv-driver-fatigue-detection
+
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Place the dataset (gitignored). Copy/symlink your `dataset/` folder
+# into the project root with `fatigue/` and `gestures/` subfolders.
+```
+
+## Reproducing the results
+
+End-to-end (a few minutes total on M3):
+
+```bash
+# Stage 1: dataset inventory.
+python scripts/inventory.py
+
+# Stage 2 (gestures, classical): per-frame features → SVM/RF, then end-to-end.
+python scripts/extract_gesture_features.py
+python scripts/train_gesture_classical.py
+python scripts/eval_gesture_sequence.py --classifier svm
+
+# Stage 3 (gestures, modern): hand-crop CNN.
+python scripts/extract_hand_crops.py
+python scripts/train_gesture_cnn.py
+python scripts/eval_gesture_sequence.py --classifier cnn
+
+# Stage 4 (fatigue, classical): per-frame features → SVM/RF + clip aggregation.
+python scripts/extract_fatigue_features.py
+python scripts/train_fatigue_classical.py
+
+# Stage 5A — modern temporal CNN (with augmentation).
+python scripts/train_fatigue_temporal_cnn.py
+
+# Stage 5D — heuristic baseline (no training; LOSO eval only).
+python scripts/eval_fatigue_heuristic.py
+
+# Stage 5E — clip-aggregate classifier (deployment model).
+python scripts/train_fatigue_aggregate.py
+
+# Stage 5F — deployment ensemble.
+python scripts/eval_fatigue_ensemble.py
+
+# Stage 6 — master tables and figures (writes summary.md/.txt + all figures).
+python scripts/make_summary.py
+python scripts/make_figures.py
+```
+
+## Realtime demo (record a video)
+
+The demo runs on your webcam, shows a HUD with the gesture state machine and
+the fatigue label, and can record the result to MP4.
+
+```bash
+# Default: aggregate-clf fatigue model + SVM gesture classifier.
+python scripts/run_realtime.py
+
+# Pick a different fatigue model:
+python scripts/run_realtime.py --fatigue-model heuristic
+python scripts/run_realtime.py --fatigue-model temporal_cnn
+python scripts/run_realtime.py --fatigue-model ensemble
+
+# Record the demo session to MP4 for the report:
+python scripts/run_realtime.py \
+    --fatigue-model aggregate_clf \
+    --output outputs/figures/realtime_demo.mp4
+
+# Process a pre-recorded clip instead of the webcam (writes annotated MP4):
+python scripts/run_realtime.py \
+    --video dataset/fatigue/yawning/some_clip.mp4 \
+    --output outputs/figures/realtime_demo_yawn.mp4
+
+# Demo flow:
+#   1. Sit roughly straight-on to the camera.
+#   2. Show an open palm for ~1s, then a thumbs up. Banner switches to ACTIVE.
+#   3. Close eyes / yawn / look down. Watch the fatigue label react.
+#   4. Press 'q' to quit.
+```
+
+CLI flags:
+
+| Flag                     | Default          | What it does                                                |
+|--------------------------|------------------|-------------------------------------------------------------|
+| `--fatigue-model`        | `aggregate_clf`  | One of `aggregate_clf`, `heuristic`, `temporal_cnn`, `svm`, `rf`, `ensemble`. |
+| `--gesture-model`        | `svm`            | One of `svm`, `cnn`.                                        |
+| `--cam`                  | `0`              | Webcam device index.                                        |
+| `--video PATH`           | (off)            | Process a pre-recorded clip instead of the webcam.          |
+| `--output PATH`          | (off)            | Write the annotated video to MP4.                           |
+| `--alert-confidence`     | `0.55`           | Min fatigue probability to count as an alert frame.         |
+| `--alert-persist`        | `1.5`            | Seconds in the alert class before raising the on-screen alarm. |
+| `--lenient`              | (off)            | Lower state-machine thresholds (easier to activate).        |
 
 ## Project structure
 
 ```
 CV_FINAL_PROJECT/
-├── dataset/                 # raw videos (gitignored - download separately)
+├── dataset/                  # raw videos (gitignored; copy locally)
 │   ├── fatigue/
 │   └── gestures/
-├── external_datasets/       # for pretraining only (gitignored)
-├── data_processed/          # extracted frames, splits (gitignored, regenerable)
-├── outputs/                 # trained models, results (gitignored)
-├── src/                     # source modules
+├── data_processed/           # extracted frames / hand crops (gitignored)
+├── outputs/
+│   ├── models/               # trained .joblib / .pt artefacts
+│   ├── reports/              # CSV + txt evaluation dumps + summary.md
+│   └── figures/              # report-ready PNGs
+├── src/
 │   ├── config.py
-│   ├── data/                # data loading, splits, frame extraction
-│   ├── gestures/            # gesture pipelines (classical + modern)
-│   ├── fatigue/             # fatigue pipelines (classical + modern)
-│   ├── system/              # state machine, integration
+│   ├── data/                 # loading, splits, frame/crop extraction
+│   ├── gestures/             # classical + CNN gesture pipelines
+│   ├── fatigue/
+│   │   ├── features.py       # 24-D per-frame face features
+│   │   ├── classical.py      # SVM/RF over per-frame features + clip agg.
+│   │   ├── temporal_cnn.py   # 1D temporal CNN + augmentation
+│   │   └── aggregate.py      # 15 hand-engineered clip-level statistics
+│   ├── system/
+│   │   ├── state_machine.py  # gesture activation FSM
+│   │   └── realtime.py       # webcam demo + heuristic + ensemble predictors
 │   └── utils/
-├── scripts/                 # runnable scripts (inventory, train, eval, demo)
-├── notebooks/               # exploratory notebooks
+├── scripts/                  # everything in `Reproducing the results`
 ├── tests/
-├── requirements.txt
 └── README.md
 ```
 
-## Setup
-
-Requires **Python 3.12** and macOS (tested on Apple Silicon M3).
-
-```bash
-# Clone the repo
-git clone https://github.com/javronich1/cv-driver-fatigue-detection.git
-cd cv-driver-fatigue-detection
-
-# Create virtual environment (use python3.12)
-python3.12 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Place the dataset
-# Copy / symlink your `dataset/` folder into the project root (with `fatigue/`
-# and `gestures/` subfolders).
-```
-
-## Running
-
-```bash
-# Stage 1: dataset inventory (sanity-check that all videos load)
-python scripts/inventory.py
-```
-
-(More commands will be added as later stages land.)
-
 ## Dataset
 
-The dataset was captured by the project members in a parked car, simulating an
-in-car driver-monitoring camera. Two subjects, single session, single lighting
-condition. External datasets (UTA-RLDD, NTHU-DDD, MRL Eye, YawDD) are used
-**only for pretraining**; all final evaluation is on our own captured data.
-
-### Folder structure
+Two subjects, single recording session, in-car-style framing. External datasets
+(UTA-RLDD, NTHU-DDD, MRL Eye, YawDD) were not used in the final results — every
+number above is on our own captured data. With only two subjects the LOSO
+splits are unavoidably noisy, which is why we report per-fold accuracy and F1
+rather than only pooled numbers.
 
 ```
 dataset/
@@ -106,4 +246,4 @@ dataset/
 
 ## Authors
 
-CV course final project, group of 3 (videos recorded by 2 of the 3 members).
+CV course final project, group of 3.

@@ -39,6 +39,16 @@ def main(argv=None) -> int:
     parser.add_argument("--seq-len", type=int, default=SEQ_LEN)
     parser.add_argument("--no-final", action="store_true",
                         help="Skip refitting on all data.")
+    # Augmentation (defaults match the post-tuning recipe — see README).
+    parser.add_argument("--augment-noise-std", type=float, default=0.05,
+                        help="Gaussian noise std on standardised features "
+                             "(real frames only; train-only). Default 0.05.")
+    parser.add_argument("--augment-time-shift", type=int, default=4,
+                        help="Random temporal crop shift in frames "
+                             "(train-only). Default 4.")
+    parser.add_argument("--augment-feature-dropout", type=float, default=0.05,
+                        help="Probability of zeroing a feature channel for "
+                             "the whole clip (train-only). Default 0.05.")
     args = parser.parse_args(argv)
 
     config.ensure_dirs()
@@ -54,12 +64,19 @@ def main(argv=None) -> int:
     print(f"Device: {best_device()}    seq_len={args.seq_len}    "
           f"epochs={args.epochs}    batch_size={args.batch_size}")
 
+    print(f"Augmentation: noise_std={args.augment_noise_std}  "
+          f"time_shift=+/-{args.augment_time_shift}  "
+          f"feature_dropout_p={args.augment_feature_dropout}")
+
     results, clip_preds = evaluate_loso(
         df,
         seq_len=args.seq_len,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
+        augment_noise_std=args.augment_noise_std,
+        augment_time_shift=args.augment_time_shift,
+        augment_feature_dropout=args.augment_feature_dropout,
     )
 
     # ---- Report ----

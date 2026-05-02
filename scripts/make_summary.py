@@ -110,6 +110,22 @@ def _fatigue_heuristic_summary() -> Dict[str, float]:
     return _fatigue_clip_metrics(csv_path, "pred_heuristic")
 
 
+def _fatigue_aggregate_summary() -> Dict[str, float]:
+    csv_path = config.REPORTS_DIR / "fatigue_clip_eval_aggregate.csv"
+    if not csv_path.exists():
+        return {"mean_accuracy": float("nan"), "mean_macro_f1": float("nan"),
+                "by_fold": {}}
+    return _fatigue_clip_metrics(csv_path, "pred_aggregate")
+
+
+def _fatigue_ensemble_summary() -> Dict[str, float]:
+    csv_path = config.REPORTS_DIR / "fatigue_clip_eval_ensemble.csv"
+    if not csv_path.exists():
+        return {"mean_accuracy": float("nan"), "mean_macro_f1": float("nan"),
+                "by_fold": {}}
+    return _fatigue_clip_metrics(csv_path, "pred_ensemble")
+
+
 # ---------------------------------------------------------------------------
 # Report builders
 # ---------------------------------------------------------------------------
@@ -246,6 +262,40 @@ def fatigue_section() -> Tuple[str, List[str]]:
             f"acc={heur['mean_accuracy']:.3f}  "
             f"F1={heur['mean_macro_f1']:.3f}"
         )
+    agg = _fatigue_aggregate_summary()
+    if agg["by_fold"]:
+        bf = agg["by_fold"]
+        md.append(
+            f"| **Aggregate-clf (clip stats)** | "
+            f"{bf['person1']['accuracy']:.3f} | "
+            f"{bf['person2']['accuracy']:.3f} | "
+            f"{bf['person1']['macro_f1']:.3f} | "
+            f"{bf['person2']['macro_f1']:.3f} | "
+            f"{agg['mean_accuracy']:.3f} | "
+            f"**{agg['mean_macro_f1']:.3f}** |"
+        )
+        plain.append(
+            f"  {'Aggregate-clf':22s}  "
+            f"acc={agg['mean_accuracy']:.3f}  "
+            f"F1={agg['mean_macro_f1']:.3f}"
+        )
+    ens = _fatigue_ensemble_summary()
+    if ens["by_fold"]:
+        bf = ens["by_fold"]
+        md.append(
+            f"| **Ensemble (heur + agg-clf)** | "
+            f"{bf['person1']['accuracy']:.3f} | "
+            f"{bf['person2']['accuracy']:.3f} | "
+            f"{bf['person1']['macro_f1']:.3f} | "
+            f"{bf['person2']['macro_f1']:.3f} | "
+            f"{ens['mean_accuracy']:.3f} | "
+            f"**{ens['mean_macro_f1']:.3f}** |"
+        )
+        plain.append(
+            f"  {'Ensemble':22s}  "
+            f"acc={ens['mean_accuracy']:.3f}  "
+            f"F1={ens['mean_macro_f1']:.3f}"
+        )
     md.append("")
     return "\n".join(md), plain
 
@@ -313,6 +363,30 @@ def headline_section() -> Tuple[str, List[str]]:
             f"  {'Heuristic (rule-based)':32s}  "
             f"acc={heur['mean_accuracy']:.3f}  "
             f"F1={heur['mean_macro_f1']:.3f}"
+        )
+    agg = _fatigue_aggregate_summary()
+    if agg["by_fold"]:
+        md.append(
+            f"| Aggregate-clf (clip stats) | "
+            f"{agg['mean_accuracy']:.3f} | "
+            f"{agg['mean_macro_f1']:.3f} |"
+        )
+        plain.append(
+            f"  {'Aggregate-clf':32s}  "
+            f"acc={agg['mean_accuracy']:.3f}  "
+            f"F1={agg['mean_macro_f1']:.3f}"
+        )
+    ens = _fatigue_ensemble_summary()
+    if ens["by_fold"]:
+        md.append(
+            f"| Ensemble (heur + agg-clf) | "
+            f"{ens['mean_accuracy']:.3f} | "
+            f"{ens['mean_macro_f1']:.3f} |"
+        )
+        plain.append(
+            f"  {'Ensemble':32s}  "
+            f"acc={ens['mean_accuracy']:.3f}  "
+            f"F1={ens['mean_macro_f1']:.3f}"
         )
 
     md.append("")

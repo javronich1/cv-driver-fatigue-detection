@@ -215,6 +215,92 @@ def make_classical_aggregator_predictor(
     return predict
 
 
+def make_aggregate_classifier_predictor(
+    model_path,
+    *,
+    fps: float = 30.0,
+) -> FatigueBufferPredictor:
+    """Load a Stage-5E clip-aggregate classifier and wrap it for realtime.
+
+    The saved payload (``outputs/models/fatigue_aggregate.joblib``) holds
+    a sklearn estimator that takes 15 hand-engineered clip-level
+    statistics (see ``src/fatigue/aggregate.py``) and returns a 3-class
+    probability. The wrapper computes those statistics on the live
+    buffer and forwards the prediction.
+    """
+    import joblib
+    from ..fatigue.aggregate import aggregate_features
+
+    payload = joblib.load(model_path)
+    model = payload["model"]
+    classes = list(payload.get("classes", model.classes_))
+    saved_fps = float(payload.get("fps", fps))
+
+    def predict(buf: np.ndarray) -> Tuple[str, float, Dict[str, float]]:
+        if buf.shape[0] == 0:
+            return classes[0], 0.0, {c: 0.0 for c in classes}
+        agg = aggregate_features(buf, fps=saved_fps).reshape(1, -1)
+        try:
+            probs = model.predict_proba(agg)[0]
+        except Exception:
+            # Models without predict_proba (rare): fall back to argmax.
+            pred = model.predict(agg)[0]
+            probs_dict = {c: 0.0 for c in classes}
+            probs_dict[str(pred)] = 1.0
+            return str(pred), 1.0, probs_dict
+        idx = int(np.argmax(probs))
+        return (
+            classes[idx],
+            float(probs[idx]),
+            {c: float(p) for c, p in zip(classes, probs)},
+        )
+
+    return predict
+
+
+def make_ensemble_predictor(
+    predictors: List[FatigueBufferPredictor],
+    *,
+    weights: Optional[List[float]] = None,
+) -> FatigueBufferPredictor:
+    """Probability-averaging ensemble of any number of buffer predictors.
+
+    Each member predicts ``(label, conf, probs)`` over the same buffer.
+    We average the per-class probabilities (with optional weights), then
+    take ``argmax`` over the averaged distribution. Members may report
+    different class sets — the union is taken; missing classes are 0.
+
+    Default weights are uniform. The realtime CLI ships a 50/50 mix of
+    the heuristic (Stage 5D) and the aggregate-classifier (Stage 5E),
+    which beats either alone in our LOSO eval — see Stage 5F notes in
+    the report summary.
+    """
+    if not predictors:
+        raise ValueError("ensemble needs at least one predictor")
+    if weights is None:
+        weights = [1.0] * len(predictors)
+    if len(weights) != len(predictors):
+        raise ValueError("len(weights) must equal len(predictors)")
+    w_total = float(sum(weights)) or 1.0
+    norm_w = [float(w) / w_total for w in weights]
+
+    def predict(buf: np.ndarray) -> Tuple[str, float, Dict[str, float]]:
+        accum: Dict[str, float] = {}
+        for pred_fn, w in zip(predictors, norm_w):
+            _, _, probs = pred_fn(buf)
+            for c, p in probs.items():
+                accum[c] = accum.get(c, 0.0) + w * float(p)
+        if not accum:
+            return FATIGUE_CLASSES[0], 0.0, {c: 0.0 for c in FATIGUE_CLASSES}
+        # Renormalise (members may not sum to 1).
+        total = sum(accum.values()) or 1.0
+        normed = {c: v / total for c, v in accum.items()}
+        label = max(normed, key=normed.get)
+        return label, normed[label], normed
+
+    return predict
+
+
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------

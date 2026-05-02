@@ -297,9 +297,13 @@ def figures_fatigue_temporal() -> None:
     )
 
     # 4c. Stage 5C: classical vs modern (1D temporal-CNN) per-clip macro-F1,
-    #     plus the data-free heuristic baseline (Stage 5D) when available.
+    #     plus the data-free heuristic baseline (Stage 5D), the
+    #     clip-aggregate classifier (Stage 5E) and the deployment
+    #     ensemble (Stage 5F) when available.
     cnn_csv = config.REPORTS_DIR / "fatigue_temporal_cnn_clip_eval.csv"
     heur_csv = config.REPORTS_DIR / "fatigue_clip_eval_heuristic.csv"
+    agg_csv = config.REPORTS_DIR / "fatigue_clip_eval_aggregate.csv"
+    ens_csv = config.REPORTS_DIR / "fatigue_clip_eval_ensemble.csv"
     if cnn_csv.exists():
         cnn_f1 = _per_clip_macro_f1(cnn_csv, "pred_temporal_cnn")
         comparison: Dict[str, list] = {
@@ -313,15 +317,23 @@ def figures_fatigue_temporal() -> None:
             comparison["Heuristic (rule-based)"] = (
                 _per_clip_macro_f1(heur_csv, "pred_heuristic")
             )
+        if agg_csv.exists():
+            comparison["Aggregate-clf (clip stats)"] = (
+                _per_clip_macro_f1(agg_csv, "pred_aggregate")
+            )
+        if ens_csv.exists():
+            comparison["Ensemble (heur + agg-clf)"] = (
+                _per_clip_macro_f1(ens_csv, "pred_ensemble")
+            )
         plot_grouped_bars(
             categories=[f"test={f}" for f in folds],
             series={k: [v[f] for f in folds] for k, v in comparison.items()},
-            title="Fatigue per-clip macro-F1 — classical vs modern vs heuristic (LOSO)",
+            title="Fatigue per-clip macro-F1 — classical / modern / heuristic / aggregate / ensemble (LOSO)",
             ylabel="macro-F1",
             out_path=config.FIGURES_DIR
                      / "fatigue_clip_macro_f1_classical_vs_cnn.png",
             ylim=(0, 1),
-            figsize=(10, 4.5),
+            figsize=(13, 4.8),
         )
 
         # 4d. Pooled confusion for the temporal CNN.
