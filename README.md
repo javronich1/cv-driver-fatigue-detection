@@ -123,12 +123,12 @@ python scripts/inventory.py
 # Stage 2 (gestures, classical): per-frame features → SVM/RF, then end-to-end.
 python scripts/extract_gesture_features.py
 python scripts/train_gesture_classical.py
-python scripts/eval_gesture_sequence.py --classifier svm
+python scripts/eval_gesture_sequence.py --model svm
 
 # Stage 3 (gestures, modern): hand-crop CNN.
 python scripts/extract_hand_crops.py
 python scripts/train_gesture_cnn.py
-python scripts/eval_gesture_sequence.py --classifier cnn
+python scripts/eval_gesture_sequence.py --model cnn
 
 # Stage 4 (fatigue, classical): per-frame features → SVM/RF + clip aggregation.
 python scripts/extract_fatigue_features.py
