@@ -208,6 +208,20 @@ def _apply_hand_present_prior(
 
 def build_gesture_predictor(kind: str, *, negative_discount: float = 0.35):
     """Returns (predict_fn, probs_fn). probs_fn returns the full Dict[class,p]."""
+    if kind == "heuristic":
+        # Pure landmark-geometry classifier — works on any hand with no
+        # training data (see src/gestures/heuristic.py).
+        from src.gestures.heuristic import predict as heuristic_predict
+
+        def probs_fn(_rgb, hand):
+            _, _, probs = heuristic_predict(hand)
+            return probs
+
+        def predict_fn(_rgb, hand):
+            label, conf, _ = heuristic_predict(hand)
+            return label, conf
+
+        return predict_fn, probs_fn
     if kind == "svm":
         path = config.MODELS_DIR / "gesture_svm.joblib"
         if not path.exists():
@@ -327,8 +341,14 @@ def main(argv=None) -> int:
                         help="Webcam device index (default 0).")
     parser.add_argument("--output", default=None,
                         help="Optional: write annotated MP4 to this path.")
-    parser.add_argument("--gesture-model", choices=("svm", "cnn"),
-                        default="svm")
+    parser.add_argument("--gesture-model",
+                        choices=("heuristic", "svm", "cnn"),
+                        default="heuristic",
+                        help="Default 'heuristic' is data-free landmark "
+                             "geometry — generalises to unseen subjects "
+                             "where the trained SVM/CNN collapse to "
+                             "'negative'. Use 'svm' or 'cnn' to drive the "
+                             "trained pipelines (kept for the LOSO report).")
     parser.add_argument("--fatigue-model",
                         choices=("temporal_cnn", "svm", "rf",
                                  "heuristic", "aggregate_clf", "ensemble"),
@@ -383,9 +403,9 @@ def main(argv=None) -> int:
     print(f"Source FPS    : {src_fps:.1f}    "
           f"input={'video' if args.video else f'cam {args.cam}'}")
 
-    # Defaults tuned for real-world deploy: open_palm SVM recall is ~50 %
-    # on held-out subjects, so 0.60 confidence cuts too many true positives.
-    _min_conf = 0.40
+    # Defaults tuned for the heuristic gesture model — its confidences
+    # are bounded ~0.05–0.93 so 0.60 is a sensible activation threshold.
+    _min_conf = 0.60
     _min_consec = 3
     if args.lenient:
         _min_conf = 0.25

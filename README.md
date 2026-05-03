@@ -187,23 +187,25 @@ CLI flags:
 | Flag                     | Default          | What it does                                                |
 |--------------------------|------------------|-------------------------------------------------------------|
 | `--fatigue-model`        | `aggregate_clf`  | One of `aggregate_clf`, `heuristic`, `temporal_cnn`, `svm`, `rf`, `ensemble`. |
-| `--gesture-model`        | `svm`            | One of `svm`, `cnn`.                                        |
+| `--gesture-model`        | `heuristic`      | One of `heuristic` (data-free landmark geometry, default), `svm`, `cnn`. The trained classifiers collapse to "negative" on unseen subjects (only 2 training subjects), so the demo defaults to the heuristic. |
 | `--cam`                  | `0`              | Webcam device index.                                        |
 | `--video PATH`           | (off)            | Process a pre-recorded clip instead of the webcam.          |
 | `--output PATH`          | (off)            | Write the annotated video to MP4.                           |
 | `--alert-confidence`     | `0.55`           | Min fatigue probability to count as an alert frame.         |
 | `--alert-persist`        | `1.5`            | Seconds in the alert class before raising the on-screen alarm. |
-| `--min-confidence`       | `0.40`           | Min per-frame gesture probability to count toward activation. |
+| `--min-confidence`       | `0.60`           | Min per-frame gesture probability to count toward activation. |
 | `--min-consecutive`      | `3`              | Consecutive in-window frames of the same gesture before it is accepted. |
-| `--negative-discount`    | `0.35`           | Multiplier on the gesture model's `negative` class once a hand has been detected (corrects training-time bias from "no hand" frames bundled into `negative`). Set `1.0` to disable. |
+| `--negative-discount`    | `0.35`           | (Trained gesture models only) Multiplier on the `negative` probability once a hand has been detected. Compensates for "no hand" frames being bundled into the training `negative` class. |
 | `--lenient`              | (off)            | Even looser thresholds (`min_confidence=0.25`, `min_consecutive=2`, `window_s=8`) for hard-to-detect gestures. |
 
-> **Activation tip:** the gesture SVM's `open_palm` recall on held-out
-> subjects is only ~50 % (LOSO), which made activation flaky in practice.
-> The defaults above were re-tuned for deployment: a hand-present prior
-> on `negative` (`--negative-discount 0.35`) plus relaxed state-machine
-> thresholds. If your open palm still isn't being detected, try
-> `--lenient` or `--negative-discount 0.20`.
+> **Why a heuristic gesture model?** The trained SVM/CNN gesture classifiers
+> are part of the report's hybrid comparison and reach ~80 % LOSO macro-F1,
+> but with only **2 training subjects** they overfit hard: on a third subject
+> the SVM outputs `negative ≈ 0.99` on a clearly-held-up palm. The heuristic
+> uses pure landmark geometry (finger extension ratios + finger-up tests) so
+> it generalises to any hand without training data, and it's the same design
+> philosophy as our `--fatigue-model heuristic`. Use `--gesture-model svm` or
+> `cnn` to drive the trained pipelines for the LOSO comparison.
 
 ## Project structure
 
