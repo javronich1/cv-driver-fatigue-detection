@@ -28,17 +28,22 @@ leave-one-person-out (LOSO) cross-validation:
 | Fatigue classify  | Per-frame SVM / RF + clip aggregation              | 1D Temporal-CNN on per-frame feature seqs    |
 | Activation logic  | State machine (same for both)                      | State machine (same for both)                |
 
-In addition to the trained pipelines we ship two baselines for the fatigue
-task:
+In addition to the trained pipelines we ship data-free baselines for **both**
+tasks (same design philosophy: when the dataset only has 2 subjects, geometric
+rules generalise better than overfit classifiers):
 
-* **Heuristic** — data-free rule on `eyeBlink{Left,Right}` mean and `jawOpen`
-  90th percentile (no parameters fit on our data).
-* **Aggregate-clf** — small Random Forest over 15 hand-engineered clip-level
-  statistics (Stage 5E). Used as the **deployment default** because it is the
-  best *trained* model and produces calibrated probabilities suitable for an
-  alert threshold.
-* **Ensemble** — 50/50 probability blend of heuristic + aggregate-clf. Shipped
-  but not selected as the default (LOSO numbers below).
+* **Gesture heuristic** (`src/gestures/heuristic.py`) — open_palm / thumbs_up /
+  negative from MediaPipe finger-extension ratios + finger-up tests. Used as
+  the **realtime activation default** because the trained SVM/CNN collapse to
+  "negative" on unseen subjects.
+* **Fatigue heuristic** — data-free rule on `eyeBlink{Left,Right}` mean and
+  `jawOpen` 90th percentile (no parameters fit on our data).
+* **Fatigue aggregate-clf** — small Random Forest over 15 hand-engineered
+  clip-level statistics (Stage 5E). Used as the **fatigue deployment default**
+  because it is the best *trained* model and produces calibrated probabilities
+  suitable for an alert threshold.
+* **Fatigue ensemble** — 50/50 probability blend of heuristic + aggregate-clf.
+  Shipped but not selected as the default (LOSO numbers below).
 
 ## Final LOSO results
 
@@ -157,7 +162,7 @@ The demo runs on your webcam, shows a HUD with the gesture state machine and
 the fatigue label, and can record the result to MP4.
 
 ```bash
-# Default: aggregate-clf fatigue model + SVM gesture classifier.
+# Default: aggregate-clf fatigue model + heuristic gesture classifier.
 python scripts/run_realtime.py
 
 # Pick a different fatigue model:
@@ -222,10 +227,12 @@ CV_FINAL_PROJECT/
 ├── src/
 │   ├── config.py
 │   ├── data/                 # loading, splits, frame/crop extraction
-│   ├── gestures/             # classical + CNN gesture pipelines
+│   ├── gestures/             # classical + CNN + heuristic gesture pipelines
 │   │   ├── classical.py      # SVM/RF on 74-D landmark features
 │   │   ├── cnn.py            # MobileNetV3-Small on 96×96 hand crops
+│   │   ├── heuristic.py      # data-free landmark-geometry classifier (deploy)
 │   │   ├── features.py       # 74-D landmark feature extractor
+│   │   ├── landmarks.py      # MediaPipe HandLandmarker wrapper
 │   │   └── state_machine.py  # gesture activation FSM (open_palm → thumbs_up)
 │   ├── fatigue/
 │   │   ├── features.py       # 24-D per-frame face features
