@@ -380,6 +380,11 @@ def main(argv=None) -> int:
                              "'negative' probability when MediaPipe has "
                              "already detected a hand. Default 0.35; set "
                              "to 1.0 to disable.")
+    parser.add_argument("--window-s", type=float, default=None,
+                        help="Maximum seconds allowed between OPEN PALM and "
+                             "THUMBS UP before the activation sequence "
+                             "resets to IDLE (default 5.0; --lenient bumps "
+                             "to 8.0).")
     parser.add_argument("--alert-confidence", type=float, default=0.55,
                         help="Min fatigue prob to count as alert-class "
                              "(default 0.55).")
@@ -415,10 +420,13 @@ def main(argv=None) -> int:
         _min_conf = args.min_confidence
     if args.min_consecutive is not None:
         _min_consec = args.min_consecutive
+    _window_s = 8.0 if args.lenient else 5.0
+    if args.window_s is not None:
+        _window_s = float(args.window_s)
     sm_cfg = StateMachineConfig(
         min_confidence=_min_conf,
         min_consecutive=_min_consec,
-        window_s=8.0 if args.lenient else 5.0,
+        window_s=_window_s,
     )
     print(f"Gesture SM    : min_confidence={_min_conf:.2f}  "
           f"min_consecutive={_min_consec}  "

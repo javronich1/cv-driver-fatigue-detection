@@ -156,36 +156,63 @@ python scripts/make_summary.py
 python scripts/make_figures.py
 ```
 
-## Realtime demo (record a video)
+## Realtime demo
 
-The demo runs on your webcam, shows a HUD with the gesture state machine and
-the fatigue label, and can record the result to MP4.
+**This is the only command you need to run the system end-to-end.** Everything
+else in this README (per-stage trainers, eval scripts, figure generators) is
+for reproducing the report numbers, not for running the system.
 
 ```bash
-# Default: aggregate-clf fatigue model + heuristic gesture classifier.
 python scripts/run_realtime.py
+```
 
-# Pick a different fatigue model:
+Defaults: heuristic gesture classifier, aggregate-clf fatigue model. Opens your
+webcam, shows the HUD, and starts in WAITING state.
+
+**Activation flow (rubric requirement):**
+
+1. Sit roughly straight-on to the camera.
+2. Show an **OPEN PALM** for ~1 s. Banner switches to `step 1/2 ✓ now show
+   THUMBS UP`.
+3. Show a **THUMBS UP** within **5 seconds** (the activation window). Banner
+   switches to `ACTIVE`. If you take longer than 5 s the state machine resets
+   to IDLE and you have to start over from the open palm.
+4. Once active, close your eyes / yawn / look down — the fatigue label reacts
+   in real time and an on-screen alarm appears after the alert label persists
+   for 1.5 s.
+5. Press `q` to quit.
+
+To save the demo to MP4 for the report:
+
+```bash
+python scripts/run_realtime.py --output outputs/figures/realtime_demo.mp4
+```
+
+<details>
+<summary>Optional variants (recreational — not needed for the rubric)</summary>
+
+```bash
+# Try the other fatigue models (gesture activation works the same):
 python scripts/run_realtime.py --fatigue-model heuristic
 python scripts/run_realtime.py --fatigue-model temporal_cnn
 python scripts/run_realtime.py --fatigue-model ensemble
 
-# Record the demo session to MP4 for the report:
-python scripts/run_realtime.py \
-    --fatigue-model aggregate_clf \
-    --output outputs/figures/realtime_demo.mp4
+# Drive the trained gesture classifiers (they overfit to the 2 training
+# subjects so live use is flaky — included only for the LOSO comparison):
+python scripts/run_realtime.py --gesture-model svm --lenient
+python scripts/run_realtime.py --gesture-model cnn --lenient
 
-# Process a pre-recorded clip instead of the webcam (writes annotated MP4):
+# Process a pre-recorded clip instead of the webcam:
 python scripts/run_realtime.py \
     --video dataset/fatigue/yawning/some_clip.mp4 \
     --output outputs/figures/realtime_demo_yawn.mp4
 
-# Demo flow:
-#   1. Sit roughly straight-on to the camera.
-#   2. Show an open palm for ~1s, then a thumbs up. Banner switches to ACTIVE.
-#   3. Close eyes / yawn / look down. Watch the fatigue label react.
-#   4. Press 'q' to quit.
+# Tighter / looser activation window:
+python scripts/run_realtime.py --window-s 3.0    # 3-second window
+python scripts/run_realtime.py --window-s 10.0   # 10-second window
 ```
+
+</details>
 
 CLI flags:
 
@@ -200,6 +227,7 @@ CLI flags:
 | `--alert-persist`        | `1.5`            | Seconds in the alert class before raising the on-screen alarm. |
 | `--min-confidence`       | `0.60`           | Min per-frame gesture probability to count toward activation. |
 | `--min-consecutive`      | `3`              | Consecutive in-window frames of the same gesture before it is accepted. |
+| `--window-s`             | `5.0`            | **Rubric requirement:** seconds allowed between OPEN PALM and THUMBS UP before the state machine resets to IDLE. |
 | `--negative-discount`    | `0.35`           | (Trained gesture models only) Multiplier on the `negative` probability once a hand has been detected. Compensates for "no hand" frames being bundled into the training `negative` class. |
 | `--lenient`              | (off)            | Even looser thresholds (`min_confidence=0.25`, `min_consecutive=2`, `window_s=8`) for hard-to-detect gestures. |
 
