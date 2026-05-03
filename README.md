@@ -297,4 +297,5 @@ dataset/
 
 ## Authors
 
-CV course final project, group of 3.
+CV course final project, Group 4
+Gonzalo Fernandez de Cordoba, Mia Dragovic, Leena El Barq, Omar El Hajj, Ruben Grande
