@@ -221,13 +221,16 @@ CV_FINAL_PROJECT/
 │   ├── config.py
 │   ├── data/                 # loading, splits, frame/crop extraction
 │   ├── gestures/             # classical + CNN gesture pipelines
+│   │   ├── classical.py      # SVM/RF on 74-D landmark features
+│   │   ├── cnn.py            # MobileNetV3-Small on 96×96 hand crops
+│   │   ├── features.py       # 74-D landmark feature extractor
+│   │   └── state_machine.py  # gesture activation FSM (open_palm → thumbs_up)
 │   ├── fatigue/
 │   │   ├── features.py       # 24-D per-frame face features
 │   │   ├── classical.py      # SVM/RF over per-frame features + clip agg.
 │   │   ├── temporal_cnn.py   # 1D temporal CNN + augmentation
 │   │   └── aggregate.py      # 15 hand-engineered clip-level statistics
 │   ├── system/
-│   │   ├── state_machine.py  # gesture activation FSM
 │   │   └── realtime.py       # webcam demo + heuristic + ensemble predictors
 │   └── utils/
 ├── scripts/                  # everything in `Reproducing the results`
