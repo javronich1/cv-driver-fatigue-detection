@@ -193,7 +193,17 @@ CLI flags:
 | `--output PATH`          | (off)            | Write the annotated video to MP4.                           |
 | `--alert-confidence`     | `0.55`           | Min fatigue probability to count as an alert frame.         |
 | `--alert-persist`        | `1.5`            | Seconds in the alert class before raising the on-screen alarm. |
-| `--lenient`              | (off)            | Lower state-machine thresholds (easier to activate).        |
+| `--min-confidence`       | `0.40`           | Min per-frame gesture probability to count toward activation. |
+| `--min-consecutive`      | `3`              | Consecutive in-window frames of the same gesture before it is accepted. |
+| `--negative-discount`    | `0.35`           | Multiplier on the gesture model's `negative` class once a hand has been detected (corrects training-time bias from "no hand" frames bundled into `negative`). Set `1.0` to disable. |
+| `--lenient`              | (off)            | Even looser thresholds (`min_confidence=0.25`, `min_consecutive=2`, `window_s=8`) for hard-to-detect gestures. |
+
+> **Activation tip:** the gesture SVM's `open_palm` recall on held-out
+> subjects is only ~50 % (LOSO), which made activation flaky in practice.
+> The defaults above were re-tuned for deployment: a hand-present prior
+> on `negative` (`--negative-discount 0.35`) plus relaxed state-machine
+> thresholds. If your open palm still isn't being detected, try
+> `--lenient` or `--negative-discount 0.20`.
 
 ## Project structure
 

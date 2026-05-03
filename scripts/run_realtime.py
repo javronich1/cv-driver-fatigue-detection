@@ -25,7 +25,7 @@ import argparse
 import sys
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -177,7 +177,36 @@ def open_source(video_path: Optional[str], cam_index: int) -> cv2.VideoCapture:
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
-def build_gesture_predictor(kind: str):
+def _apply_hand_present_prior(
+    probs: Dict[str, float],
+    *,
+    negative_discount: float = 0.35,
+) -> Dict[str, float]:
+    """Down-weight the ``negative`` class when a hand was actually detected.
+
+    Why this exists: the training "negative" class mixes two different
+    things — ``random hands`` (hand visible, not a target gesture) AND
+    ``no hands`` (no hand at all, zero feature vector). At realtime time,
+    the gesture predictor only fires AFTER MediaPipe's hand detector has
+    already confirmed a hand is present, so the second sub-population is
+    irrelevant. Without correction, the SVM/RF (trained jointly on both)
+    drifts the decision boundary toward "negative" and produces a heavy
+    false-negative rate on real ``open_palm`` frames in deployment
+    (matches the LOSO ~50 % open_palm recall we measured). Applying a
+    hand-present prior at inference time recovers most of that recall
+    without retraining.
+    """
+    if "negative" not in probs:
+        return probs
+    adj = dict(probs)
+    adj["negative"] = adj["negative"] * float(negative_discount)
+    total = sum(adj.values())
+    if total <= 1e-9:
+        return probs  # nothing to do
+    return {k: v / total for k, v in adj.items()}
+
+
+def build_gesture_predictor(kind: str, *, negative_discount: float = 0.35):
     """Returns (predict_fn, probs_fn). probs_fn returns the full Dict[class,p]."""
     if kind == "svm":
         path = config.MODELS_DIR / "gesture_svm.joblib"
@@ -192,9 +221,17 @@ def build_gesture_predictor(kind: str):
         def probs_fn(_rgb, hand):
             feats = landmarks_to_features(hand)
             p = sk_model.predict_proba(feats[None, :])[0]
-            return {c: float(v) for c, v in zip(classes, p)}
+            raw = {c: float(v) for c, v in zip(classes, p)}
+            return _apply_hand_present_prior(
+                raw, negative_discount=negative_discount,
+            )
 
-        return make_classical_predictor(sk_model), probs_fn
+        def predict(rgb, hand):
+            adj = probs_fn(rgb, hand)
+            label, conf = max(adj.items(), key=lambda kv: kv[1])
+            return label, conf
+
+        return predict, probs_fn
     if kind == "cnn":
         from src.gestures.cnn import (
             load_model as load_gesture_cnn,
@@ -215,16 +252,24 @@ def build_gesture_predictor(kind: str):
             if cropped is None:
                 return {c: 0.0 for c in cnn_classes} | {"negative": 1.0}
             crop_rgb, _ = cropped
-            return cnn_predict_proba(
+            raw = cnn_predict_proba(
                 model, crop_rgb,
                 classes=cnn_classes, input_size=cnn_input_size,
             )
+            return _apply_hand_present_prior(
+                raw, negative_discount=negative_discount,
+            )
+
+        def cnn_predict(rgb, hand):
+            adj = probs_fn(rgb, hand)
+            label, conf = max(adj.items(), key=lambda kv: kv[1])
+            return label, conf
 
         return (
-            make_cnn_predictor(model, classes=cnn_classes,
-                               input_size=cnn_input_size),
+            cnn_predict,
             probs_fn,
         )
+
     raise ValueError(f"Unknown --gesture-model: {kind!r}")
 
 
@@ -304,6 +349,17 @@ def main(argv=None) -> int:
     parser.add_argument("--lenient", action="store_true",
                         help="Lower state-machine thresholds (easier to "
                              "activate; useful for debugging).")
+    parser.add_argument("--min-confidence", type=float, default=None,
+                        help="Override per-frame gesture confidence threshold "
+                             "(default 0.40). Lower = easier to activate.")
+    parser.add_argument("--min-consecutive", type=int, default=None,
+                        help="Override consecutive-frame count before a "
+                             "gesture is accepted (default 3). Lower = faster.")
+    parser.add_argument("--negative-discount", type=float, default=0.35,
+                        help="Multiplier applied to the gesture classifier's "
+                             "'negative' probability when MediaPipe has "
+                             "already detected a hand. Default 0.35; set "
+                             "to 1.0 to disable.")
     parser.add_argument("--alert-confidence", type=float, default=0.55,
                         help="Min fatigue prob to count as alert-class "
                              "(default 0.55).")
@@ -316,7 +372,10 @@ def main(argv=None) -> int:
     print(f"Gesture model : {args.gesture_model}")
     print(f"Fatigue model : {args.fatigue_model}")
 
-    gesture_pred, gesture_probs_fn = build_gesture_predictor(args.gesture_model)
+    gesture_pred, gesture_probs_fn = build_gesture_predictor(
+        args.gesture_model, negative_discount=args.negative_discount,
+    )
+    print(f"Gesture prior : negative_discount={args.negative_discount:.2f}")
     fatigue_pred = build_fatigue_predictor(args.fatigue_model)
 
     cap = open_source(args.video, args.cam)
@@ -324,15 +383,26 @@ def main(argv=None) -> int:
     print(f"Source FPS    : {src_fps:.1f}    "
           f"input={'video' if args.video else f'cam {args.cam}'}")
 
-    sm_cfg = StateMachineConfig()
+    # Defaults tuned for real-world deploy: open_palm SVM recall is ~50 %
+    # on held-out subjects, so 0.60 confidence cuts too many true positives.
+    _min_conf = 0.40
+    _min_consec = 3
     if args.lenient:
-        sm_cfg = StateMachineConfig(
-            min_consecutive=2,
-            min_confidence=0.4,
-            window_s=8.0,
-        )
-        print("LENIENT mode: min_consecutive=2  min_confidence=0.4  "
-              "window_s=8.0")
+        _min_conf = 0.25
+        _min_consec = 2
+    # CLI overrides take priority over --lenient.
+    if args.min_confidence is not None:
+        _min_conf = args.min_confidence
+    if args.min_consecutive is not None:
+        _min_consec = args.min_consecutive
+    sm_cfg = StateMachineConfig(
+        min_confidence=_min_conf,
+        min_consecutive=_min_consec,
+        window_s=8.0 if args.lenient else 5.0,
+    )
+    print(f"Gesture SM    : min_confidence={_min_conf:.2f}  "
+          f"min_consecutive={_min_consec}  "
+          f"window_s={sm_cfg.window_s:.0f}s")
     rt_cfg = RealtimeConfig(
         target_fps=src_fps if args.video else 30.0,
         sm_config=sm_cfg,
