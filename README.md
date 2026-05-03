@@ -7,9 +7,10 @@ Computer Vision course.
 ## What this project does
 
 1. Camera watches the driver. System is **inactive** by default.
-2. Driver performs gesture sequence: **open palm → thumbs up** within a time
-   window. A state machine on top of a per-frame gesture classifier handles the
-   activation.
+2. Driver performs gesture sequence: **open palm → thumbs up** within a
+   5-second activation window (configurable via `--window-s`). A state
+   machine on top of a per-frame gesture classifier handles the activation;
+   if the second gesture doesn't arrive in time the system resets to IDLE.
 3. Once activated, a face-feature predictor classifies the driver as
    **alert / drowsy / yawning** from the last few seconds of MediaPipe
    blendshapes (eye blink, look-down, jaw, head pose, mouth aspect ratio).
