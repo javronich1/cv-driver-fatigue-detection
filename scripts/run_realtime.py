@@ -385,6 +385,11 @@ def main(argv=None) -> int:
                              "THUMBS UP before the activation sequence "
                              "resets to IDLE (default 5.0; --lenient bumps "
                              "to 8.0).")
+    parser.add_argument("--skip-activation", action="store_true",
+                        help="Pre-activate the state machine and go straight "
+                             "to fatigue monitoring. Used for processing "
+                             "fatigue clips that don't contain the gesture "
+                             "sequence (smoke tests / dataset demos).")
     parser.add_argument("--alert-confidence", type=float, default=0.55,
                         help="Min fatigue prob to count as alert-class "
                              "(default 0.55).")
@@ -451,6 +456,14 @@ def main(argv=None) -> int:
         config=rt_cfg,
         gesture_probs_fn=gesture_probs_fn,
     ) as system:
+        if args.skip_activation:
+            # Force the state machine straight into ACTIVATED so the
+            # fatigue path runs from frame 0. Useful for processing
+            # dataset clips that don't contain a gesture sequence.
+            from src.gestures.state_machine import State as _State
+            system._sm.state = _State.ACTIVATED
+            system._activated_at = 0.0
+            print("Skip-activation: state machine pre-activated.")
         try:
             while True:
                 ok, bgr = cap.read()

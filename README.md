@@ -159,10 +159,22 @@ python scripts/make_figures.py
 
 ## Realtime demo
 
-> **📹 Demonstration video:** [`docs/realtime_demo.mp4`](docs/realtime_demo.mp4)
-> — recorded webcam session showing the gesture activation sequence
-> (OPEN PALM → THUMBS UP) and the fatigue detector reacting to closed
-> eyes / yawning / head drops in real time.
+> **📹 Demonstration videos**
+>
+> * [`docs/realtime_demo.mp4`](docs/realtime_demo.mp4) — full live
+>   webcam session: gesture activation (OPEN PALM → THUMBS UP) followed
+>   by the fatigue detector reacting in real time.
+> * [`docs/smoke_tests/`](docs/smoke_tests/) — system run on five
+>   in-car fatigue clips from the dataset (gesture stage skipped via
+>   `--skip-activation`). Per-frame labels (majority over the clip):
+>
+>   | clip | expected | detected | rate |
+>   |------|----------|----------|------|
+>   | [alert](docs/smoke_tests/alert.mp4)                 | alert   | alert   | 95 / 95  (100 %) |
+>   | [yawning](docs/smoke_tests/yawning.mp4)             | yawning | yawning | 49 / 49  (100 %) |
+>   | [eyes_closed](docs/smoke_tests/eyes_closed.mp4)     | drowsy  | drowsy  | 94 / 94  (100 %) |
+>   | [head_drooping](docs/smoke_tests/head_drooping.mp4) | drowsy  | drowsy  | 89 / 95  ( 94 %) |
+>   | [microsleep](docs/smoke_tests/microsleep.mp4)       | drowsy  | drowsy  | 93 / 93  (100 %) |
 
 **This is the only command you need to run the system end-to-end.** Everything
 else in this README (per-stage trainers, eval scripts, figure generators) is
@@ -213,6 +225,12 @@ python scripts/run_realtime.py \
     --video dataset/fatigue/yawning/some_clip.mp4 \
     --output outputs/figures/realtime_demo_yawn.mp4
 
+# Process a fatigue clip that has no gesture sequence (smoke tests):
+python scripts/run_realtime.py \
+    --video dataset/fatigue/microsleep/person1_microsleep_1.mp4 \
+    --skip-activation \
+    --output docs/smoke_tests/microsleep.mp4
+
 # Tighter / looser activation window:
 python scripts/run_realtime.py --window-s 3.0    # 3-second window
 python scripts/run_realtime.py --window-s 10.0   # 10-second window
@@ -236,6 +254,7 @@ CLI flags:
 | `--window-s`             | `5.0`            | **Rubric requirement:** seconds allowed between OPEN PALM and THUMBS UP before the state machine resets to IDLE. |
 | `--negative-discount`    | `0.35`           | (Trained gesture models only) Multiplier on the `negative` probability once a hand has been detected. Compensates for "no hand" frames being bundled into the training `negative` class. |
 | `--lenient`              | (off)            | Even looser thresholds (`min_confidence=0.25`, `min_consecutive=2`, `window_s=8`) for hard-to-detect gestures. |
+| `--skip-activation`      | (off)            | Pre-activate the state machine and go straight to fatigue monitoring. Used to process dataset clips that don't contain the gesture sequence (see smoke tests above). |
 
 > **Why a heuristic gesture model?** The trained SVM/CNN gesture classifiers
 > are part of the report's hybrid comparison and reach ~80 % LOSO macro-F1,
