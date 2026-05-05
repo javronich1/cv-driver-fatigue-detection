@@ -159,6 +159,11 @@ python scripts/make_figures.py
 
 ## Realtime demo
 
+> **📹 Demonstration video:** [`docs/realtime_demo.mp4`](docs/realtime_demo.mp4)
+> — recorded webcam session showing the gesture activation sequence
+> (OPEN PALM → THUMBS UP) and the fatigue detector reacting to closed
+> eyes / yawning / head drops in real time.
+
 **This is the only command you need to run the system end-to-end.** Everything
 else in this README (per-stage trainers, eval scripts, figure generators) is
 for reproducing the report numbers, not for running the system.
