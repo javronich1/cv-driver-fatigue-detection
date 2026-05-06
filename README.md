@@ -157,6 +157,12 @@ python scripts/make_summary.py
 python scripts/make_figures.py
 ```
 
+## Technical report
+
+> **📄 Full write-up:** [`docs/CV_report.pdf`](docs/CV_report.pdf) — Group 4
+> technical report (system overview, dataset, feature extraction, gesture
+> activation, fatigue detection, real-time system, discussion).
+
 ## Realtime demo
 
 > **📹 Demonstration videos**
