@@ -114,6 +114,87 @@ export const SOURCES: Source[] = [
     topics: ["oi", "di"],
   },
 
+  // ---- Official AVEVA OMI documentation (docs.aveva.com) ----
+  {
+    id: "doc-omi-about",
+    title: "About Operations Management Interface (OMI)",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi/page/257023.html",
+    reference: "OMI Help › About OMI",
+    topics: ["omi", "concepts"],
+  },
+  {
+    id: "doc-omi-deploy-viewapp",
+    title: "Deploy a ViewApp — AVEVA OMI",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi/page/270991.html",
+    reference: "OMI Help › Deploy a ViewApp",
+    topics: ["omi", "deployment"],
+  },
+  {
+    id: "doc-omi-nav",
+    title: "About ViewApp navigation hierarchical display — AVEVA OMI",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi-awc/page/338129.html",
+    reference: "OMI Help › ViewApp navigation hierarchy",
+    topics: ["omi"],
+  },
+  {
+    id: "doc-omi-nav-controls",
+    title: "Display of controls in the ViewApp navigation hierarchy — AVEVA OMI",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi-awc/page/338195.html",
+    reference: "OMI Help › Navigation controls display",
+    topics: ["omi"],
+  },
+  {
+    id: "doc-omi-webclient-limits",
+    title: "General OMI web client limitations — AVEVA OMI",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi/page/1220627.html",
+    reference: "OMI Help › Web client limitations",
+    topics: ["omi", "troubleshooting"],
+  },
+  {
+    id: "doc-omi-webclient-troubleshoot",
+    title: "Troubleshoot OMI web client connection issues — AVEVA OMI",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi/page/1312461.html",
+    reference: "OMI Help › Troubleshoot web client connection",
+    topics: ["omi", "troubleshooting", "security"],
+  },
+  {
+    id: "doc-omi-issues",
+    title: "AVEVA OMI issues — System Platform Installation",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-install/page/298263.html",
+    reference: "Install Help › OMI issues",
+    topics: ["omi", "troubleshooting"],
+  },
+  {
+    id: "doc-omi-resolved",
+    title: "Resolved issues — AVEVA OMI 2023 R2 Patch 01",
+    kind: "official-doc",
+    url: "https://docs.aveva.com/bundle/sp-omi/page/1365727.html",
+    reference: "OMI Readme › Resolved issues",
+    topics: ["omi", "troubleshooting"],
+  },
+  {
+    id: "pdf-omi-workshop",
+    title: "AVEVA OMI Workshop — Creating & Running a ViewApp",
+    kind: "official-pdf",
+    url: "https://cdn.logic-control.com/calendar/AVEVA_OMI_Part03_CreatingRunningViewApp.pdf",
+    reference: "OMI Workshop Part 3",
+    topics: ["omi", "deployment"],
+  },
+  {
+    id: "pdf-omi-training",
+    title: "AVEVA InTouch OMI Training Manual (uploaded)",
+    kind: "official-pdf",
+    reference: "Uploaded OMI training manual — ingest to resolve section refs",
+    topics: ["omi", "concepts"],
+  },
+
   // ---- Official AVEVA / Wonderware product manuals (PDF) ----
   {
     id: "pdf-ide",
@@ -198,4 +279,10 @@ export const SOURCE_BY_ID: Record<string, Source> = Object.fromEntries(
 
 export function getSources(ids: string[] = []): Source[] {
   return ids.map((id) => SOURCE_BY_ID[id]).filter(Boolean) as Source[];
+}
+
+// Register runtime sources (e.g. user-uploaded manuals) so citations resolve.
+// Idempotent and client-only in practice.
+export function registerSources(srcs: Source[]) {
+  for (const s of srcs) SOURCE_BY_ID[s.id] = s;
 }

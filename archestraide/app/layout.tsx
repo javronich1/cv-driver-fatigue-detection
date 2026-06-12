@@ -3,9 +3,9 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "ArchestrAide — AVEVA Application Server Support Copilot",
+  title: "ArchestrAide — AVEVA Application Server & OMI Support Copilot",
   description:
-    "Internal AI support copilot for AVEVA Application Server / System Platform: grounded answers, guided troubleshooting, runbooks, docs search, and glossary.",
+    "Internal AI support copilot for AVEVA Application Server, OMI & System Platform: grounded answers, guided troubleshooting, runbooks, docs search, glossary, and uploadable manuals.",
 };
 
 export default function RootLayout({

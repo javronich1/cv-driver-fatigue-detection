@@ -14,6 +14,7 @@ import {
   IconInfo,
   IconSun,
   IconMoon,
+  IconLayers,
 } from "./icons";
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/troubleshoot", label: "Troubleshoot", icon: IconWrench },
   { href: "/runbooks", label: "Runbooks", icon: IconBook },
   { href: "/docs", label: "Docs / Search", icon: IconSearch },
+  { href: "/manuals", label: "Manuals", icon: IconLayers },
   { href: "/glossary", label: "Glossary", icon: IconList },
   { href: "/known-issues", label: "Known issues", icon: IconAlert },
   { href: "/about", label: "Settings / About", icon: IconInfo },

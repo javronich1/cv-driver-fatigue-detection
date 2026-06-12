@@ -12,6 +12,7 @@ export type Topic =
   | "object-management"
   | "csv"
   | "runtime"
+  | "omi"
   | "troubleshooting"
   | "concepts";
 
@@ -26,6 +27,7 @@ export const TOPIC_LABELS: Record<Topic, string> = {
   "object-management": "Object Management",
   csv: "CSV / Import-Export",
   runtime: "Runtime",
+  omi: "OMI / ViewApp",
   troubleshooting: "Troubleshooting",
   concepts: "Concepts",
 };
@@ -34,10 +36,14 @@ export const TOPIC_LABELS: Record<Topic, string> = {
 // the UI can show "official" vs "inferred" provenance and earn user trust.
 export type SourceKind =
   | "official-doc" // docs.aveva.com or official AVEVA PDF
-  | "official-pdf" // uploaded AVEVA manual / official PDF
+  | "official-pdf" // official AVEVA manual / PDF
+  | "uploaded" // manual the user uploaded in-browser (local to their device)
   | "community" // AVEVA community / vendor tech note (clearly labelled)
   | "runbook" // ArchestrAide-curated runbook based on trusted sources
   | "glossary"; // ArchestrAide-curated concept page
+
+// Product line a piece of knowledge applies to (for filtering / badges).
+export type Product = "appserver" | "omi" | "historian" | "general";
 
 export interface Source {
   id: string;

@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
-import { search } from "@/lib/retrieval";
+import { retrieveWith } from "@/lib/retrieval";
 import { getSources } from "@/lib/knowledge/sources";
 import { Chunk } from "@/lib/knowledge/types";
+import { loadUserKnowledge } from "@/lib/userKnowledge";
 import { SourceKindBadge } from "@/components/Sources";
 import { IconSearch, IconExternal } from "@/components/icons";
 
@@ -13,6 +14,7 @@ const KIND_FILTERS: { id: Chunk["kind"]; label: string }[] = [
   { id: "runbook", label: "Runbooks" },
   { id: "glossary", label: "Glossary" },
   { id: "known-issue", label: "Known issues" },
+  { id: "doc", label: "Your manuals" },
 ];
 
 const KIND_LABEL: Record<Chunk["kind"], string> = {
@@ -25,11 +27,20 @@ const KIND_LABEL: Record<Chunk["kind"], string> = {
 export default function DocsPage() {
   const [q, setQ] = useState("");
   const [kinds, setKinds] = useState<Chunk["kind"][]>([]);
+  const [userChunks, setUserChunks] = useState<Chunk[]>([]);
+
+  // Blend in any locally-uploaded manuals (registers their sources too).
+  useEffect(() => {
+    setUserChunks(loadUserKnowledge().chunks);
+  }, []);
 
   const results = useMemo(() => {
     if (!q.trim()) return [];
-    return search(q, { kinds: kinds.length ? kinds : undefined, limit: 30 });
-  }, [q, kinds]);
+    return retrieveWith(userChunks, q, {
+      kinds: kinds.length ? kinds : undefined,
+      limit: 30,
+    });
+  }, [q, kinds, userChunks]);
 
   function toggleKind(k: Chunk["kind"]) {
     setKinds((cur) =>
@@ -84,7 +95,7 @@ export default function DocsPage() {
           return (
             <Link
               key={chunk.id}
-              href={chunk.href || "#"}
+              href={chunk.href || (chunk.kind === "doc" ? "/manuals" : "#")}
               className="panel card-hover block p-4"
             >
               <div className="mb-1.5 flex flex-wrap items-center gap-2">

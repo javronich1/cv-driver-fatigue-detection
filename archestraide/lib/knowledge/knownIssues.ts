@@ -79,6 +79,36 @@ export const KNOWN_ISSUES: KnownIssue[] = [
     sourceIds: ["pdf-ide"],
     keywords: ["checked out", "locked object", "undo check out", "deploy greyed", "cannot edit"],
   },
+  {
+    id: "ki-omi-webclient-limits",
+    title: "Some OMI apps/features don't work in the web client",
+    topics: ["omi"],
+    environment: "OMI web (browser) client",
+    symptom:
+      "A ViewApp that works in the local OMI client renders partially or behaves differently in the browser web client.",
+    cause:
+      "The OMI web client has documented limitations — not every OMI app or feature is supported in the browser compared with the local client.",
+    workaround:
+      "Check the official 'General OMI web client limitations' list. For unsupported features, use the local client, or redesign the ViewApp to use web-supported apps. By design per AVEVA docs.",
+    status: "by-design",
+    sourceIds: ["doc-omi-webclient-limits"],
+    keywords: ["omi web client", "not supported", "browser", "partial render", "viewapp web"],
+  },
+  {
+    id: "ki-omi-layout-as-content",
+    title: "A layout dropped as content inside another layout misbehaves",
+    topics: ["omi"],
+    environment: "OMI ViewApp with nested layouts",
+    symptom:
+      "When a layout is used as content within another layout, panes/navigation don't render or interact as expected.",
+    cause:
+      "Nested layout-as-content is an advanced pattern with configuration constraints; misconfiguration leads to layout/navigation problems (reported in AVEVA community and addressed across patches).",
+    workaround:
+      "Review the layout/pane and navigation configuration against the OMI navigation-hierarchy docs; simplify the nesting or follow the supported Content Presenter pattern. Check OMI resolved-issues for your patch level.",
+    status: "known",
+    sourceIds: ["doc-omi-nav", "doc-omi-resolved"],
+    keywords: ["nested layout", "layout as content", "content presenter", "navigation hierarchy", "panes"],
+  },
 ];
 
 export const KNOWN_ISSUE_BY_ID: Record<string, KnownIssue> = Object.fromEntries(

@@ -374,6 +374,116 @@ export const GLOSSARY: GlossaryTerm[] = [
     related: ["pv-sp", "quality"],
     sourceIds: ["pdf-ide"],
   },
+  // ---- AVEVA OMI (Operations Management Interface) ----
+  {
+    id: "omi",
+    term: "OMI (Operations Management Interface)",
+    aliases: ["AVEVA OMI", "InTouch OMI", "Operations Management Interface"],
+    topics: ["omi", "concepts"],
+    short:
+      "AVEVA's modern operator visualization layer for System Platform — operators run ViewApps built from reusable apps, layouts, and content driven by the Galaxy.",
+    explanation:
+      "OMI is the runtime visualization experience for System Platform (the successor/companion to classic InTouch windows). Engineers compose ViewApps from layouts, panes, screen profiles, and OMI apps; the ViewApp binds to Galaxy objects so operators see live data, alarms, trends, and navigation. OMI runs on the local client and increasingly via a web client.",
+    example:
+      "A control room ViewApp shows a plant overview layout with a navigation pane, an alarm app, and Content Presenter panes — all bound to AppEngine-hosted objects.",
+    related: ["viewapp", "omi-layout", "omi-app", "omi-screen-profile", "omi-web-client"],
+    sourceIds: ["doc-omi-about", "pdf-omi-workshop"],
+  },
+  {
+    id: "viewapp",
+    term: "ViewApp",
+    aliases: ["$ViewApp", "view application"],
+    topics: ["omi", "deployment"],
+    short:
+      "The deployable OMI application an operator runs — a composition of layouts, screen profiles, apps, and content, hosted by a ViewEngine.",
+    explanation:
+      "A ViewApp is the OMI equivalent of a runtime application: it defines which layouts and apps appear, the navigation model, and the screen profile(s) for different stations. Like other objects it is configured in the IDE, assigned to a platform/ViewEngine, and deployed. Operators launch the deployed ViewApp to interact with the plant.",
+    example:
+      "ViewApp 'Plant_Operations' is assigned to the operator station's ViewEngine and deployed; the operator launches it to monitor and control.",
+    related: ["omi", "omi-layout", "omi-screen-profile", "appengine"],
+    sourceIds: ["doc-omi-deploy-viewapp", "pdf-omi-workshop"],
+  },
+  {
+    id: "omi-layout",
+    term: "Layout / Pane (OMI)",
+    aliases: ["OMI layout", "layout editor", "pane"],
+    topics: ["omi"],
+    short:
+      "A reusable arrangement of panes that defines where apps and content appear on screen within a ViewApp.",
+    explanation:
+      "Layouts (built in the Layout Editor) divide the screen into panes; each pane hosts an app or content (e.g. a graphic, alarm app, or Content Presenter). Layouts are reused across screens and screen profiles to keep a consistent operator experience. A layout dropped as content inside another layout is a common advanced pattern (and a source of issues if misconfigured).",
+    example:
+      "A 3-pane layout: left navigation, center process graphic, bottom alarm strip — reused on every operating screen.",
+    related: ["viewapp", "omi-app", "omi-screen-profile"],
+    sourceIds: ["doc-omi-nav", "doc-omi-nav-controls"],
+  },
+  {
+    id: "omi-screen-profile",
+    term: "Screen Profile (OMI)",
+    topics: ["omi"],
+    short:
+      "Defines how a ViewApp maps to physical displays/monitors for a given station class.",
+    explanation:
+      "Screen profiles let one ViewApp target different station configurations (single monitor, multi-monitor, different resolutions) by mapping layouts to screens. This is how the same application adapts to a single operator PC versus a multi-screen control desk.",
+    example:
+      "A 'Control Desk' screen profile maps the overview layout to monitor 1 and detail layouts to monitors 2–3.",
+    related: ["viewapp", "omi-layout"],
+    sourceIds: ["doc-omi-about", "pdf-omi-workshop"],
+  },
+  {
+    id: "omi-app",
+    term: "OMI App",
+    aliases: ["app", "OMI application module"],
+    topics: ["omi"],
+    short:
+      "A pluggable visualization module placed in a pane — e.g. navigation, alarms, trends, or Content Presenter.",
+    explanation:
+      "OMI apps are reusable building blocks dropped into layout panes to deliver specific functionality. AVEVA ships standard apps (navigation, alarms, trend, Content Presenter, etc.) and partners/users can add more. Apps bind to Galaxy data and react to the ViewApp's selected object/context.",
+    example:
+      "The Alarm app in the bottom pane shows active alarms filtered to the currently navigated area.",
+    related: ["content-presenter", "omi-layout", "viewapp"],
+    sourceIds: ["doc-omi-about", "doc-omi-nav-controls"],
+  },
+  {
+    id: "content-presenter",
+    term: "Content Presenter (OMI App)",
+    topics: ["omi"],
+    short:
+      "A flexible OMI app that displays content (graphics, documents, web content, embedded apps) with configurable layout, filtering, and sizing.",
+    explanation:
+      "Content Presenter shows context-driven content in a pane: you configure filter-area properties, layout-area properties (fill, view mode, alignment, padding), and size-area properties (columns/rows, viewport). It's commonly used to surface the right graphic or document for the operator's current selection.",
+    example:
+      "When an operator selects Pump-101, Content Presenter swaps to that pump's detail graphic automatically.",
+    related: ["omi-app", "omi-layout"],
+    sourceIds: ["doc-omi-about"],
+  },
+  {
+    id: "omi-web-client",
+    term: "OMI Web Client",
+    topics: ["omi", "security"],
+    short:
+      "Browser-based access to OMI ViewApps, subject to documented limitations versus the local client.",
+    explanation:
+      "The OMI web client lets users open ViewApps in a browser without the full local install. Not every OMI app/feature is supported in the web client, and connectivity depends on the web/OPC UA services, certificates, and authentication. Connection failures usually trace to the web services, certificates, or auth rather than the ViewApp itself.",
+    example:
+      "An operator opens the plant ViewApp from a tablet browser; if it won't connect, check the OMI web services and certificate trust first.",
+    related: ["viewapp", "omi"],
+    sourceIds: ["doc-omi-webclient-limits", "doc-omi-webclient-troubleshoot"],
+  },
+  {
+    id: "viewengine",
+    term: "ViewEngine",
+    topics: ["omi", "runtime"],
+    short:
+      "The runtime engine (like an AppEngine, but for visualization) that hosts and runs deployed ViewApps on a node.",
+    explanation:
+      "A ViewEngine runs on a WinPlatform and executes ViewApps, much as an AppEngine executes automation objects. A ViewApp must be assigned to a ViewEngine and deployed (and the engine running) for an operator to launch it.",
+    example:
+      "The operator station's WinPlatform hosts a ViewEngine that runs the deployed 'Plant_Operations' ViewApp.",
+    related: ["viewapp", "appengine", "winplatform"],
+    sourceIds: ["doc-omi-deploy-viewapp", "pdf-platform-manager"],
+  },
+
   {
     id: "template-toolbox",
     term: "Template Toolbox",

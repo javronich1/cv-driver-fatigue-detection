@@ -1,4 +1,4 @@
-import { retrieve } from "./retrieval";
+import { retrieveWith } from "./retrieval";
 import {
   RUNBOOK_BY_ID,
   GLOSSARY_BY_ID,
@@ -6,7 +6,7 @@ import {
   KNOWN_ISSUE_BY_ID,
   getSources,
 } from "./knowledge";
-import { Source } from "./knowledge/types";
+import { Source, Chunk } from "./knowledge/types";
 
 export type AnswerSectionKind = "text" | "list" | "steps";
 
@@ -52,8 +52,12 @@ function relatedTermsFor(ids: string[]): { id: string; term: string }[] {
 }
 
 // Deterministic, fully-grounded answer composition. No external calls.
-export function composeAnswer(query: string): ComposedAnswer {
-  const results = retrieve(query, { limit: 6 });
+// `extraChunks` lets user-uploaded manuals participate in retrieval.
+export function composeAnswer(
+  query: string,
+  extraChunks: Chunk[] = []
+): ComposedAnswer {
+  const results = retrieveWith(extraChunks, query, { limit: 6 });
 
   if (results.length === 0) {
     return {
@@ -91,7 +95,10 @@ export function composeAnswer(query: string): ComposedAnswer {
 
   // Confidence: strong, source-backed top hit → high; weak → low.
   const officialBacked = getSources(top.chunk.sourceIds).some(
-    (s) => s.kind === "official-doc" || s.kind === "official-pdf"
+    (s) =>
+      s.kind === "official-doc" ||
+      s.kind === "official-pdf" ||
+      s.kind === "uploaded"
   );
   let confidence: ComposedAnswer["confidence"] = "medium";
   if (top.score >= 4 && officialBacked) confidence = "high";
@@ -209,16 +216,18 @@ export function composeAnswer(query: string): ComposedAnswer {
     };
   }
 
-  // ---- Fallback synthesis from top chunks ----
+  // ---- Fallback synthesis from top chunks (incl. uploaded manual passages) ----
+  const fromManual = top.chunk.kind === "doc";
   return {
     query,
     mode: "general",
-    shortAnswer:
-      "Here is the most relevant grounded material from the AVEVA knowledge base.",
+    shortAnswer: fromManual
+      ? "Here are the most relevant passages from the uploaded manuals for your question. These are direct excerpts — verify against the full source."
+      : "Here is the most relevant grounded material from the AVEVA knowledge base.",
     sections: results.slice(0, 4).map((r) => ({
       heading: r.chunk.title,
       kind: "text" as const,
-      body: r.chunk.text.slice(0, 400),
+      body: r.chunk.text.slice(0, 500),
     })),
     sources: dedupeSources(allSourceIds),
     tools: [],

@@ -64,14 +64,14 @@ export default function HomePage() {
             Archestr<span className="text-accent">Aide</span>
           </h1>
           <p className="mt-2 text-base font-medium text-slate-300 sm:text-lg">
-            AVEVA Application Server Support Copilot
+            AVEVA Application Server &amp; OMI Support Copilot
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-400">
-            An internal AVEVA Application Server support copilot for onboarding,
-            theory questions, documentation search, and first-line
+            An internal AVEVA Application Server &amp; OMI support copilot for
+            onboarding, theory questions, documentation search, and first-line
             troubleshooting. Grounded in official AVEVA documentation and curated
             runbooks — with clear separation of official facts from inferred
-            guidance.
+            guidance. Upload your own training manuals to extend its knowledge.
           </p>
           <div className="mt-6 max-w-2xl">
             <HeroSearch />
@@ -171,14 +171,19 @@ export default function HomePage() {
             </p>
             <p className="mt-0.5 max-w-xl text-xs leading-relaxed text-slate-400">
               Every substantial answer cites its sources and flags confidence.
-              Add your own AVEVA PDFs to expand coverage — see the README
-              ingestion guide.
+              Upload your own Application Server / OMI training manuals to expand
+              coverage — they&apos;re indexed in your browser and cited in answers.
             </p>
           </div>
         </div>
-        <Link href="/about" className="btn btn-ghost shrink-0">
-          How it works
-        </Link>
+        <div className="flex shrink-0 gap-2">
+          <Link href="/manuals" className="btn btn-primary">
+            Upload manuals
+          </Link>
+          <Link href="/about" className="btn btn-ghost">
+            How it works
+          </Link>
+        </div>
       </section>
     </div>
   );

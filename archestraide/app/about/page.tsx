@@ -76,15 +76,21 @@ export default function AboutPage() {
           <IconSpark width={16} height={16} className="text-accent" /> Extending the
           knowledge base
         </h2>
+        <p className="mb-3 text-sm leading-relaxed text-slate-300">
+          The fastest way is the{" "}
+          <a href="/manuals" className="text-accent">Manuals</a> page: upload your
+          AVEVA Application Server or OMI training PDFs and they&apos;re parsed in
+          your browser, indexed, and blended into answers (cited as “Your manual”).
+          Stored per-device; for a shared library, ingest server-side.
+        </p>
         <p className="text-sm leading-relaxed text-slate-300">
-          Add more coverage by editing structured content under{" "}
+          To extend the built-in knowledge, edit structured content under{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">lib/knowledge/</code>{" "}
           — <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">runbooks.ts</code>,{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">glossary.ts</code>,{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">knownIssues.ts</code>, and{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">sources.ts</code>.
-          To ingest AVEVA PDFs/manuals, see the ingestion guide in the README — chunks
-          drop straight into the same retrieval layer with their source citations.
+          See the ingestion guide in the README for the PDF→chunks pipeline.
         </p>
       </section>
 

@@ -558,6 +558,133 @@ export const RUNBOOKS: Runbook[] = [
     sourceIds: ["doc-sp-deployment", "comm-insource-deploy"],
     keywords: ["login failed", "access denied", "authentication", "security mode", "aaadministrators", "aaconfigtools", "permissions", "galaxy security"],
   },
+  {
+    id: "rb-omi-viewapp-deploy",
+    title: "OMI ViewApp won't deploy or changes don't appear",
+    category: "OMI / ViewApp",
+    topics: ["omi", "deployment", "troubleshooting"],
+    severity: "medium",
+    symptom:
+      "An OMI ViewApp fails to deploy, won't launch, or configuration changes (layouts, apps, content) don't show up at the operator station.",
+    likelyCauses: [
+      "ViewApp not assigned to a ViewEngine, or the platform/ViewEngine isn't deployed and running",
+      "ViewApp checked out or changed but not checked in / re-deployed (version mismatch)",
+      "Referenced layout, screen profile, or OMI app is missing, broken, or itself not deployed",
+      "Graphic/content references resolve to Bad quality objects (upstream data issue)",
+      "Client cache/old ViewApp version still running on the station",
+    ],
+    firstTool: "ArchestrA IDE",
+    steps: [
+      {
+        title: "Confirm assignment and that the ViewEngine is running",
+        detail:
+          "In Deployment View, verify the ViewApp is assigned to a ViewEngine on the operator station's WinPlatform, and that the platform and ViewEngine are deployed and running (OnScan) in Platform Manager.",
+        tool: "Platform Manager",
+        sourceIds: ["doc-omi-deploy-viewapp", "pdf-platform-manager"],
+      },
+      {
+        title: "Check in changes, then re-deploy the ViewApp",
+        detail:
+          "ViewApp edits only take effect after check-in and (re)deploy. Confirm it's checked in and the deployed version matches the configuration; cascade-deploy if shared layouts/apps changed.",
+        tool: "ArchestrA IDE",
+        sourceIds: ["doc-omi-deploy-viewapp", "pdf-ide"],
+      },
+      {
+        title: "Validate referenced layouts, screen profiles and apps",
+        detail:
+          "Open the ViewApp and confirm each referenced layout, screen profile, and OMI app exists and is valid. A layout dropped as content inside another layout is a known trouble spot — verify it's configured correctly.",
+        tool: "ArchestrA IDE",
+        sourceIds: ["doc-omi-nav", "doc-omi-nav-controls"],
+      },
+      {
+        title: "Check data quality behind the graphics",
+        detail:
+          "If the ViewApp launches but panels are blank/red, the bound objects may be Bad quality or OffScan. Use Object Viewer to confirm the underlying attributes are Good/OnScan (see the Bad quality runbook).",
+        tool: "Object Viewer",
+        sourceIds: ["pdf-object-viewer", "doc-offscan"],
+      },
+      {
+        title: "Relaunch the client to clear a stale ViewApp",
+        detail:
+          "Close and relaunch the ViewApp on the station so it loads the freshly deployed version rather than a cached one. Confirm the version/timestamp updates.",
+        tool: "Platform Manager",
+        sourceIds: ["doc-omi-resolved", "doc-omi-issues"],
+      },
+    ],
+    confirmResolution:
+      "The ViewApp deploys, the ViewEngine runs it, and the latest layouts/apps/content appear with live Good-quality data at the station.",
+    escalateWhen:
+      "Assignment, check-in/redeploy, references and data quality all check out but the ViewApp still won't deploy or refresh — capture Log Viewer on the station and the ViewApp deployment state and escalate.",
+    sourceIds: ["doc-omi-deploy-viewapp", "doc-omi-issues", "doc-omi-resolved"],
+    keywords: [
+      "viewapp won't deploy",
+      "omi changes not showing",
+      "viewapp not launching",
+      "layout missing",
+      "screen profile",
+      "viewengine",
+    ],
+  },
+  {
+    id: "rb-omi-webclient",
+    title: "OMI web client won't connect or load a ViewApp",
+    category: "OMI / ViewApp",
+    topics: ["omi", "security", "troubleshooting"],
+    severity: "medium",
+    symptom:
+      "The OMI web client fails to connect, shows a blank/partial ViewApp, or errors when loading in the browser.",
+    likelyCauses: [
+      "OMI web services / OPC UA service not running or not reachable from the client",
+      "Certificate not trusted between browser/client and the web/UA service",
+      "Authentication / login mode mismatch for the web client",
+      "Using a feature/app not supported in the web client (documented limitations)",
+      "Network/firewall or URL/port issue to the web client endpoint",
+    ],
+    firstTool: "OCMC (SMC)",
+    steps: [
+      {
+        title: "Confirm the OMI web services and OPC UA service are running",
+        detail:
+          "Verify the OMI web client services and the OPC UA service are deployed and running on the server, and reachable from the client machine (URL/port).",
+        tool: "OCMC (SMC)",
+        sourceIds: ["doc-omi-webclient-troubleshoot", "doc-opcua-service"],
+      },
+      {
+        title: "Check certificate trust",
+        detail:
+          "A rejected/untrusted certificate silently blocks the web client. Confirm the certificate is valid and trusted by the browser/client and that the UA endpoint's certificate is accepted.",
+        tool: "OI Server Manager",
+        sourceIds: ["doc-omi-webclient-troubleshoot", "doc-opcua-service"],
+      },
+      {
+        title: "Verify authentication / login configuration",
+        detail:
+          "Confirm the web client login mode and credentials match the Galaxy security configuration. Auth mismatches present as connect/login failures rather than ViewApp errors.",
+        tool: "ArchestrA IDE",
+        sourceIds: ["doc-omi-webclient-troubleshoot", "doc-sp-deployment"],
+      },
+      {
+        title: "Rule out unsupported web client features",
+        detail:
+          "If only part of the ViewApp loads, check the documented OMI web client limitations — some apps/features aren't supported in the browser and need the local client.",
+        tool: "ArchestrA IDE",
+        sourceIds: ["doc-omi-webclient-limits"],
+      },
+    ],
+    confirmResolution:
+      "The browser connects, authenticates, and loads the ViewApp with live data and supported apps rendering correctly.",
+    escalateWhen:
+      "Services are running, certificate is trusted, auth is correct and the features used are supported, but the web client still fails — capture the browser error, server logs, and escalate.",
+    sourceIds: ["doc-omi-webclient-troubleshoot", "doc-omi-webclient-limits"],
+    keywords: [
+      "omi web client",
+      "web client won't connect",
+      "browser viewapp",
+      "certificate",
+      "opc ua service",
+      "web login failed",
+    ],
+  },
 ];
 
 export const RUNBOOK_BY_ID: Record<string, Runbook> = Object.fromEntries(

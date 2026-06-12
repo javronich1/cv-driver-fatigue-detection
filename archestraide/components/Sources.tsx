@@ -15,6 +15,11 @@ const KIND_META: Record<
     cls: "border-signal-ok/30 bg-signal-ok/10 text-signal-ok",
     official: true,
   },
+  uploaded: {
+    label: "Your manual",
+    cls: "border-accent/30 bg-accent/10 text-accent-soft",
+    official: true,
+  },
   community: {
     label: "Community / vendor",
     cls: "border-signal-warn/30 bg-signal-warn/10 text-signal-warn",
@@ -76,12 +81,9 @@ export function SourceCard({ source }: { source: Source }) {
 
 export function SourceList({ sources }: { sources: Source[] }) {
   if (!sources.length) return null;
-  const official = sources.filter(
-    (s) => s.kind === "official-doc" || s.kind === "official-pdf"
-  );
-  const other = sources.filter(
-    (s) => s.kind !== "official-doc" && s.kind !== "official-pdf"
-  );
+  const OFFICIAL = new Set(["official-doc", "official-pdf", "uploaded"]);
+  const official = sources.filter((s) => OFFICIAL.has(s.kind));
+  const other = sources.filter((s) => !OFFICIAL.has(s.kind));
   return (
     <div className="space-y-3">
       {official.length > 0 && (

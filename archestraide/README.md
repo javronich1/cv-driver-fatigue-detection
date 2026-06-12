@@ -1,15 +1,20 @@
 # ArchestrAide
 
-### AVEVA Application Server Support Copilot
+### AVEVA Application Server & OMI Support Copilot
 
-> An internal AVEVA Application Server support copilot for onboarding, theory
-> questions, documentation search, and first-line troubleshooting.
+> An internal AVEVA Application Server & OMI support copilot for onboarding,
+> theory questions, documentation search, and first-line troubleshooting.
 
 ArchestrAide is a **retrieval-grounded** AI support assistant for engineering and
-support teams working with **AVEVA Application Server / System Platform**. It is
-deliberately *not* a generic chatbot: every substantial answer is assembled from
-curated, source-cited content and clearly separates **official documentation
+support teams working with **AVEVA Application Server, OMI & System Platform**. It
+is deliberately *not* a generic chatbot: every substantial answer is assembled
+from curated, source-cited content and clearly separates **official documentation
 facts** from **inferred troubleshooting heuristics**.
+
+Coverage spans **Application Server** (templates, DI/OI, deployment, historian,
+alarms, security, runtime) and **OMI** (ViewApps, layouts, screen profiles, OMI
+apps / Content Presenter, web client). Users can also **upload their own training
+manuals** (PDF), parsed in-browser and blended into answers.
 
 ---
 
@@ -21,9 +26,10 @@ facts** from **inferred troubleshooting heuristics**.
 | **Troubleshoot mode** | A guided wizard: pick a symptom category, answer two scoping questions (environment, trigger), and get a tailored, checklist-style diagnostic path with environment-aware warnings. |
 | **Runbooks** | 10 curated, support-oriented playbooks (symptom → likely causes → first tool → ordered checks → confirm → escalate), filterable by category and deep-linkable. |
 | **Docs / Search** | Hybrid keyword + concept search across runbooks, concepts, and known issues, with source-kind badges and snippet previews. |
-| **Glossary** | 28 curated concept pages (Galaxy, Template, DI Object, Autobind, OnScan/OffScan, Historian, AlarmModeCmd, …) with definition, explanation, example, related terms, and sources. |
-| **Known issues** | Environment-specific gotchas distilled from official readmes and labelled community tech notes. |
-| **Source grounding** | Every answer cites its sources, badged *Official doc / Official manual / Community / Curated runbook*. Confidence is flagged (high / medium / low). |
+| **Glossary** | Curated concept pages spanning Application Server **and OMI** (Galaxy, Template, DI Object, Autobind, OnScan/OffScan, Historian, AlarmModeCmd, ViewApp, Layout, Screen Profile, Content Presenter, OMI Web Client, ViewEngine, …) with definition, explanation, example, related terms, and sources. |
+| **Manuals (upload)** | Upload your own AVEVA Application Server / OMI training PDFs. They're parsed **in the browser** (pdf.js), chunked, stored in local storage, and blended into Ask / Troubleshoot / Docs — cited as *Your manual*. Per-device (no backend); see ingestion guide for the shared/server-backed path. |
+| **Known issues** | Environment-specific gotchas distilled from official readmes and labelled community tech notes (Application Server + OMI). |
+| **Source grounding** | Every answer cites its sources, badged *Official doc / Official manual / Your manual / Community / Curated runbook*. Confidence is flagged (high / medium / low). |
 
 The UI is **dark-mode-first** (with a light mode), responsive, and built for long
 technical content.
