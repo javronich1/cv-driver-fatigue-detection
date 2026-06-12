@@ -1,0 +1,19 @@
+# Netlify deployment config for ArchestrAide (Next.js 14 App Router).
+#
+# Netlify auto-detects Next.js and installs @netlify/plugin-nextjs, which makes
+# the optional /api/ask serverless function work. The app also runs fully
+# without the function (client-side grounded composer), so it stays useful even
+# if functions are disabled.
+#
+# To enable live LLM synthesis: set ANTHROPIC_API_KEY (and optionally
+# ARCHESTRAIDE_MODEL) as environment variables in the Netlify site settings.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "20"
