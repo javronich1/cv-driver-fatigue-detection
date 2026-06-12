@@ -1,20 +1,20 @@
 # Netlify config for ArchestrAide.
 #
-# The Next.js app lives in the /archestraide subfolder of this repo, so Netlify
-# must build from there. `base` switches Netlify into that directory; the
-# official @netlify/plugin-nextjs (auto-installed) then builds the Next app and
-# wires the /api/ask route as a serverless function.
+# The Next.js app lives in the /archestraide subfolder, so `base` switches
+# Netlify into that directory. We build a STATIC EXPORT (no Next.js runtime
+# plugin) and publish the generated `out/` folder. The app runs fully
+# client-side (retrieval + grounded answer composition), so this is a complete,
+# functional deployment with zero serverless dependencies.
 #
-# To enable live LLM synthesis: set ANTHROPIC_API_KEY (and optionally
-# ARCHESTRAIDE_MODEL) in Netlify → Site settings → Environment variables.
-# Without it, the app runs fully on the deterministic grounded composer.
+# The /api/ask route is removed before the static build (route handlers can't be
+# statically exported); the client falls back to the deterministic grounded
+# composer. To get live LLM answers instead, deploy with @netlify/plugin-nextjs
+# and set ANTHROPIC_API_KEY (see archestraide/README.md).
 
 [build]
   base = "archestraide"
-  command = "npm run build"
+  command = "rm -rf app/api && STATIC_EXPORT=true npm run build"
+  publish = "out"
 
 [build.environment]
   NODE_VERSION = "20"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
