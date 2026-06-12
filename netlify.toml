@@ -1,0 +1,20 @@
+# Netlify config for ArchestrAide.
+#
+# The Next.js app lives in the /archestraide subfolder of this repo, so Netlify
+# must build from there. `base` switches Netlify into that directory; the
+# official @netlify/plugin-nextjs (auto-installed) then builds the Next app and
+# wires the /api/ask route as a serverless function.
+#
+# To enable live LLM synthesis: set ANTHROPIC_API_KEY (and optionally
+# ARCHESTRAIDE_MODEL) in Netlify → Site settings → Environment variables.
+# Without it, the app runs fully on the deterministic grounded composer.
+
+[build]
+  base = "archestraide"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
