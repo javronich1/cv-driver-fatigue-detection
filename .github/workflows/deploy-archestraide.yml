@@ -8,6 +8,7 @@ name: Deploy ArchestrAide to GitHub Pages
 on:
   push:
     branches:
+      - main
       - claude/archestraaide-aveva-copilot-qle9dj
     paths:
       - "archestraide/**"
