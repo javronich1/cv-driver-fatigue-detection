@@ -14,54 +14,57 @@ export default function AboutPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Settings / About"
-        title="About ArchestrAide"
-        subtitle="An internal AVEVA Application Server support copilot for onboarding, theory questions, documentation search, and first-line troubleshooting."
+        eyebrow="Ajustes / Acerca de"
+        title="Acerca de ArchestrAide"
+        subtitle="Un copilot interno de soporte de AVEVA Application Server y OMI para onboarding, preguntas de teoría, búsqueda de documentación y troubleshooting de primera línea."
       />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Stat label="Runbooks" value={RUNBOOKS.length} />
-        <Stat label="Concepts" value={GLOSSARY.length} />
-        <Stat label="Known issues" value={KNOWN_ISSUES.length} />
-        <Stat label="Cited sources" value={SOURCES.length} />
+        <Stat label="Conceptos" value={GLOSSARY.length} />
+        <Stat label="Problemas conocidos" value={KNOWN_ISSUES.length} />
+        <Stat label="Fuentes citadas" value={SOURCES.length} />
       </div>
 
       <section className="panel p-5 sm:p-6">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-300">
-          <IconLayers width={16} height={16} className="text-accent" /> How it works
+          <IconLayers width={16} height={16} className="text-accent" /> Cómo funciona
         </h2>
         <div className="space-y-3 text-sm leading-relaxed text-slate-300">
           <p>
-            ArchestrAide is a <strong>retrieval-grounded</strong> assistant, not a
-            generic chatbot. Every runbook, concept, and known issue is stored as
-            structured content with explicit source metadata. When you ask a
-            question, a hybrid keyword + concept retrieval layer finds the most
-            relevant material, and a deterministic composer assembles a structured,
-            support-oriented answer with citations and a confidence flag.
+            ArchestrAide es un asistente <strong>fundamentado en recuperación</strong>,
+            no un chatbot genérico. Cada runbook, concepto y problema conocido se
+            guarda como contenido estructurado con metadatos de fuente explícitos.
+            Cuando preguntas, una capa de recuperación híbrida (palabra clave +
+            concepto) encuentra el material más relevante y un compositor
+            determinista arma una respuesta estructurada y orientada a soporte, con
+            citas y una marca de confianza.
           </p>
           <p>
-            When an <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">ANTHROPIC_API_KEY</code>{" "}
-            is configured on the host, the retrieved context is additionally passed
-            to Claude under strict grounding instructions to produce a polished
-            short answer — but the structure, sources, and confidence always come
-            from the grounded layer, so citations stay trustworthy. With no key, the
-            app runs fully on the deterministic composer.
+            Cuando se configura una{" "}
+            <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">ANTHROPIC_API_KEY</code>{" "}
+            en el host, el contexto recuperado se pasa además a Claude con
+            instrucciones estrictas de fundamentación para producir una respuesta
+            corta pulida — pero la estructura, las fuentes y la confianza siempre
+            vienen de la capa fundamentada, así que las citas siguen siendo
+            confiables. Sin clave, la app funciona del todo con el compositor
+            determinista.
           </p>
         </div>
       </section>
 
       <section className="panel p-5 sm:p-6">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-300">
-          <IconShield width={16} height={16} className="text-signal-warn" /> Trust &
-          safety model
+          <IconShield width={16} height={16} className="text-signal-warn" /> Modelo de
+          confianza y seguridad
         </h2>
         <ul className="space-y-2 text-sm leading-relaxed text-slate-300">
           {[
-            "Answers cite their sources and separate official facts from inferred troubleshooting heuristics.",
-            "The assistant won't invent AVEVA-specific settings, attribute names, or menu paths that aren't in a trusted source — it says when it's unsure.",
-            "Troubleshooting is framed as 'most likely / check first', never 'this is definitely the cause'.",
-            "Environment-specific warnings (lab vs production, authentication mode) are surfaced where relevant.",
-            "It never claims to have validated live environment state unless you provide it.",
+            "Las respuestas citan sus fuentes y separan los hechos oficiales de las heurísticas de troubleshooting inferidas.",
+            "El asistente no inventa settings, nombres de atributos ni rutas de menú específicas de AVEVA que no estén en una fuente confiable — dice cuándo no está seguro.",
+            "El troubleshooting se enmarca como 'lo más probable / revisa primero', nunca como 'esta es definitivamente la causa'.",
+            "Se muestran advertencias específicas del entorno (lab vs producción, modo de autenticación) cuando aplican.",
+            "Nunca afirma haber validado el estado en vivo del entorno salvo que tú lo proporciones.",
           ].map((t) => (
             <li key={t} className="flex gap-2.5">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent/70" />
@@ -73,30 +76,33 @@ export default function AboutPage() {
 
       <section className="panel p-5 sm:p-6">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-300">
-          <IconSpark width={16} height={16} className="text-accent" /> Extending the
-          knowledge base
+          <IconSpark width={16} height={16} className="text-accent" /> Ampliar la base
+          de conocimiento
         </h2>
         <p className="mb-3 text-sm leading-relaxed text-slate-300">
-          The fastest way is the{" "}
-          <a href="/manuals" className="text-accent">Manuals</a> page: upload your
-          AVEVA Application Server or OMI training PDFs and they&apos;re parsed in
-          your browser, indexed, and blended into answers (cited as “Your manual”).
-          Stored per-device; for a shared library, ingest server-side.
+          La forma más rápida es la página{" "}
+          <a href="/manuals" className="text-accent">Manuales</a>: sube tus PDFs de
+          capacitación de AVEVA Application Server u OMI y se procesan en tu
+          navegador, se indexan y se integran en las respuestas (citados como “Tu
+          manual”). Se guardan por dispositivo; para una biblioteca compartida,
+          ingesta en servidor. También puedes aportar problemas a la{" "}
+          <a href="/community" className="text-accent">Comunidad</a>.
         </p>
         <p className="text-sm leading-relaxed text-slate-300">
-          To extend the built-in knowledge, edit structured content under{" "}
+          Para ampliar el conocimiento incorporado, edita el contenido estructurado
+          en{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">lib/knowledge/</code>{" "}
           — <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">runbooks.ts</code>,{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">glossary.ts</code>,{" "}
-          <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">knownIssues.ts</code>, and{" "}
+          <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">knownIssues.ts</code> y{" "}
           <code className="rounded bg-base-700 px-1.5 py-0.5 text-xs">sources.ts</code>.
-          See the ingestion guide in the README for the PDF→chunks pipeline.
+          Mira la guía de ingesta en el README para el pipeline PDF→chunks.
         </p>
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-400">
-          Knowledge sources ({officialCount} official)
+          Fuentes de conocimiento ({officialCount} oficiales)
         </h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {SOURCES.map((s) => (
@@ -127,9 +133,9 @@ export default function AboutPage() {
       </section>
 
       <p className="text-xs leading-relaxed text-slate-500">
-        ArchestrAide is an MVP. It assists with onboarding and first-line
-        troubleshooting and is not a substitute for official AVEVA support or
-        validated change-management processes in production environments.
+        ArchestrAide es un MVP. Asiste en el onboarding y el troubleshooting de
+        primera línea y no sustituye al soporte oficial de AVEVA ni a los procesos
+        validados de gestión de cambios en entornos de producción.
       </p>
     </div>
   );

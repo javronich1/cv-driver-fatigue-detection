@@ -17,7 +17,7 @@ const PRODUCTS: { id: Product; label: string }[] = [
   { id: "appserver", label: "Application Server" },
   { id: "omi", label: "OMI" },
   { id: "historian", label: "Historian" },
-  { id: "general", label: "Other / General" },
+  { id: "general", label: "Otro / General" },
 ];
 
 const TOPICS = Object.entries(TOPIC_LABELS) as [Topic, string][];
@@ -59,7 +59,7 @@ export default function ManualsPage() {
         setJustAdded(manual.id);
         setTimeout(() => setJustAdded(null), 2500);
       } catch (e: any) {
-        setError(`${file.name}: ${e?.message || "Failed to ingest."}`);
+        setError(`${file.name}: ${e?.message || "Falló la ingesta."}`);
       } finally {
         setBusy(null);
       }
@@ -72,9 +72,9 @@ export default function ManualsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Knowledge / Manuals"
-        title="Upload training manuals"
-        subtitle="Add your AVEVA Application Server and OMI training manuals (PDF). They're parsed in your browser and blended into Ask, Troubleshoot, and Docs search — with citations back to your manual."
+        eyebrow="Conocimiento / Manuales"
+        title="Sube manuales de capacitación"
+        subtitle="Agrega tus manuales de capacitación de AVEVA Application Server y OMI (PDF). Se procesan en tu navegador y se integran en Preguntar, Troubleshooting y la búsqueda de Docs — con citas de vuelta a tu manual."
       />
 
       {/* Local-only notice */}
@@ -83,12 +83,13 @@ export default function ManualsPage() {
           <IconLayers width={17} height={17} />
         </span>
         <div className="text-sm leading-relaxed text-slate-300">
-          <p className="font-semibold text-slate-100">Stored on this device only</p>
+          <p className="font-semibold text-slate-100">Guardado solo en este dispositivo</p>
           <p className="mt-0.5 text-slate-400">
-            Uploads are processed locally and saved in this browser&apos;s storage —
-            nothing is sent to a server, and they aren&apos;t shared with other
-            users. Clearing site data removes them. For a shared, team-wide manual
-            library, see the server-backed ingestion path in the README.
+            Las subidas se procesan localmente y se guardan en el almacenamiento de
+            este navegador — nada se envía a un servidor y no se comparten con otros
+            usuarios. Borrar los datos del sitio los elimina. Para una biblioteca de
+            manuales compartida por todo el equipo, mira la sección de Comunidad o la
+            vía de ingesta en servidor del README.
           </p>
         </div>
       </div>
@@ -98,7 +99,7 @@ export default function ManualsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Product
+              Producto
             </span>
             <select
               value={product}
@@ -114,7 +115,7 @@ export default function ManualsPage() {
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Primary topic
+              Tema principal
             </span>
             <select
               value={topic}
@@ -140,10 +141,10 @@ export default function ManualsPage() {
             <IconLayers width={22} height={22} />
           </span>
           <span className="text-sm font-semibold text-slate-100">
-            {busy ? "Processing…" : "Click to choose PDF manual(s)"}
+            {busy ? "Procesando…" : "Haz clic para elegir manual(es) PDF"}
           </span>
           <span className="text-xs text-slate-500">
-            Text-based PDFs · parsed in-browser · multiple files supported
+            PDFs con texto · procesados en el navegador · varios archivos a la vez
           </span>
         </button>
         <input
@@ -182,18 +183,18 @@ export default function ManualsPage() {
       {/* Manual list */}
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">
-          Your manuals ({manuals.length})
+          Tus manuales ({manuals.length})
         </h2>
         {totalChunks > 0 && (
-          <span className="text-xs text-slate-500">{totalChunks} passages indexed</span>
+          <span className="text-xs text-slate-500">{totalChunks} pasajes indexados</span>
         )}
       </div>
 
       {manuals.length === 0 ? (
         <div className="panel p-8 text-center text-sm text-slate-400">
-          No manuals yet. Upload your Application Server or OMI training PDF to get
-          started — then ask questions about it in{" "}
-          <Link href="/ask" className="text-accent">Ask</Link>.
+          Aún no hay manuales. Sube tu PDF de capacitación de Application Server u
+          OMI para empezar — luego pregunta sobre él en{" "}
+          <Link href="/ask" className="text-accent">Preguntar</Link>.
         </div>
       ) : (
         <div className="space-y-3">
@@ -212,7 +213,7 @@ export default function ManualsPage() {
                   <span className="chip">{TOPIC_LABELS[m.topic]}</span>
                   {justAdded === m.id && (
                     <span className="chip border-signal-ok/30 bg-signal-ok/10 text-signal-ok">
-                      <IconCheck width={12} height={12} /> Added
+                      <IconCheck width={12} height={12} /> Agregado
                     </span>
                   )}
                 </div>
@@ -220,7 +221,7 @@ export default function ManualsPage() {
                   {m.name}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {m.pages} pages · {m.chunks.length} passages ·{" "}
+                  {m.pages} páginas · {m.chunks.length} pasajes ·{" "}
                   {new Date(m.addedAt).toLocaleDateString()}
                 </p>
               </div>
@@ -228,13 +229,13 @@ export default function ManualsPage() {
                 onClick={() => setManuals(removeManual(m.id))}
                 className="btn btn-ghost shrink-0 px-3 py-1.5 text-xs"
               >
-                Remove
+                Quitar
               </button>
             </div>
           ))}
 
           <Link href="/ask" className="btn btn-primary mt-2 w-full sm:w-auto">
-            <IconChat width={16} height={16} /> Ask against your manuals
+            <IconChat width={16} height={16} /> Preguntar a tus manuales
           </Link>
         </div>
       )}

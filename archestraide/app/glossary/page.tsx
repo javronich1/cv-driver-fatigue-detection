@@ -45,9 +45,9 @@ export default function GlossaryPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Glossary"
-        title="Concepts & terms"
-        subtitle="A curated, fast reference for core AVEVA Application Server / System Platform concepts — short definition, plain explanation, a practical example, and related terms."
+        eyebrow="Glosario"
+        title="Conceptos y términos"
+        subtitle="Una referencia rápida y curada de los conceptos clave de AVEVA Application Server / OMI / System Platform — definición corta, explicación simple, un ejemplo práctico y términos relacionados."
       />
 
       <div className="panel mb-6 flex items-center gap-2 p-2">
@@ -57,7 +57,7 @@ export default function GlossaryPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Filter terms — e.g. 'autobind', 'OnScan', 'galaxy'"
+          placeholder="Filtra términos — p. ej. 'autobind', 'OnScan', 'galaxy'"
           className="flex-1 bg-transparent px-1 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
         />
       </div>
@@ -88,7 +88,7 @@ export default function GlossaryPage() {
             {g.example && (
               <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Example
+                  Ejemplo
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-slate-300">
                   {g.example}
@@ -126,7 +126,7 @@ export default function GlossaryPage() {
         ))}
         {filtered.length === 0 && (
           <div className="panel p-8 text-center text-sm text-slate-400">
-            No terms match “{q}”.
+            Ningún término coincide con “{q}”.
           </div>
         )}
       </div>

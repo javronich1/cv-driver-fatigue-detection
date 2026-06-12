@@ -10,7 +10,13 @@ export function SeverityChip({ severity }: { severity: Runbook["severity"] }) {
       : severity === "medium"
       ? "border-signal-warn/30 bg-signal-warn/10 text-signal-warn"
       : "border-signal-ok/30 bg-signal-ok/10 text-signal-ok";
-  return <span className={`chip ${cls}`}>{severity} severity</span>;
+  const label =
+    severity === "high"
+      ? "severidad alta"
+      : severity === "medium"
+      ? "severidad media"
+      : "severidad baja";
+  return <span className={`chip ${cls}`}>{label}</span>;
 }
 
 function Block({
@@ -47,7 +53,7 @@ export default function RunbookDetail({
         </div>
       )}
 
-      <Block title="Most likely causes" icon={<IconAlert width={14} height={14} />}>
+      <Block title="Causas más probables" icon={<IconAlert width={14} height={14} />}>
         <ul className="space-y-1.5">
           {rb.likelyCauses.map((c, i) => (
             <li key={i} className="flex gap-2.5 text-sm text-slate-300">
@@ -60,11 +66,11 @@ export default function RunbookDetail({
 
       <div className="rounded-xl border border-accent/20 bg-accent/[0.05] p-3 text-sm">
         <span className="font-semibold text-accent-soft">
-          Open first: {rb.firstTool}
+          Abre primero: {rb.firstTool}
         </span>
       </div>
 
-      <Block title="Step-by-step checks" icon={<IconTool width={14} height={14} />}>
+      <Block title="Revisiones paso a paso" icon={<IconTool width={14} height={14} />}>
         <ol className="space-y-3">
           {rb.steps.map((s, i) => (
             <li key={i} className="flex gap-3">
@@ -90,7 +96,7 @@ export default function RunbookDetail({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-signal-ok/20 bg-signal-ok/[0.05] p-4">
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-signal-ok">
-            <IconCheck width={14} height={14} /> Confirm resolved
+            <IconCheck width={14} height={14} /> Confirmar resolución
           </p>
           <p className="text-sm leading-relaxed text-slate-300">
             {rb.confirmResolution}
@@ -98,7 +104,7 @@ export default function RunbookDetail({
         </div>
         <div className="rounded-xl border border-signal-danger/20 bg-signal-danger/[0.05] p-4">
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-signal-danger">
-            <IconAlert width={14} height={14} /> Escalate when
+            <IconAlert width={14} height={14} /> Cuándo escalar
           </p>
           <p className="text-sm leading-relaxed text-slate-300">
             {rb.escalateWhen}
@@ -106,7 +112,7 @@ export default function RunbookDetail({
         </div>
       </div>
 
-      <Block title="Sources">
+      <Block title="Fuentes">
         <SourceList sources={getSources(rb.sourceIds)} />
       </Block>
     </div>

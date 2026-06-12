@@ -4,15 +4,15 @@ import { IconCheck, IconTool, IconArrow, IconShield, IconSpark } from "./icons";
 import Link from "next/link";
 
 const CONFIDENCE_META = {
-  high: { label: "High confidence", cls: "text-signal-ok", dot: "bg-signal-ok" },
-  medium: { label: "Medium confidence", cls: "text-signal-warn", dot: "bg-signal-warn" },
-  low: { label: "Low confidence", cls: "text-signal-danger", dot: "bg-signal-danger" },
+  high: { label: "Confianza alta", cls: "text-signal-ok", dot: "bg-signal-ok" },
+  medium: { label: "Confianza media", cls: "text-signal-warn", dot: "bg-signal-warn" },
+  low: { label: "Confianza baja", cls: "text-signal-danger", dot: "bg-signal-danger" },
 };
 
 const MODE_META = {
   troubleshoot: { label: "Troubleshooting", cls: "chip-accent" },
-  concept: { label: "Concept", cls: "chip-accent" },
-  general: { label: "Reference", cls: "chip-accent" },
+  concept: { label: "Concepto", cls: "chip-accent" },
+  general: { label: "Referencia", cls: "chip-accent" },
 };
 
 export default function AnswerView({
@@ -38,16 +38,16 @@ export default function AnswerView({
             </span>
             {answer.llm ? (
               <span className="chip">
-                <IconSpark width={12} height={12} /> AI-synthesised
+                <IconSpark width={12} height={12} /> Sintetizado por IA
               </span>
             ) : (
-              <span className="chip">Grounded composer</span>
+              <span className="chip">Compositor fundamentado</span>
             )}
           </div>
 
           {/* Short answer */}
           <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-accent">
-            Short answer
+            Respuesta corta
           </div>
           <p className="text-[15px] font-medium leading-relaxed text-slate-100">
             {answer.shortAnswer}
@@ -111,7 +111,7 @@ export default function AnswerView({
         {answer.tools.length > 0 && (
           <div className="panel p-4">
             <h4 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
-              <IconTool width={14} height={14} /> Tools to open
+              <IconTool width={14} height={14} /> Herramientas a abrir
             </h4>
             <div className="flex flex-wrap gap-2">
               {answer.tools.map((t) => (
@@ -123,13 +123,13 @@ export default function AnswerView({
 
         <div className="panel p-4">
           <h4 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
-            <IconCheck width={14} height={14} /> Sources
+            <IconCheck width={14} height={14} /> Fuentes
           </h4>
           {answer.sources.length ? (
             <SourceList sources={answer.sources} />
           ) : (
             <p className="text-xs text-slate-500">
-              No grounded source matched — no AVEVA-specific claim made.
+              Ninguna fuente fundamentada coincidió — no se hace afirmación específica de AVEVA.
             </p>
           )}
         </div>
@@ -137,7 +137,7 @@ export default function AnswerView({
         {answer.relatedTerms.length > 0 && (
           <div className="panel p-4">
             <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Related terms
+              Términos relacionados
             </h4>
             <div className="flex flex-wrap gap-2">
               {answer.relatedTerms.map((t) => (
@@ -152,7 +152,7 @@ export default function AnswerView({
         {answer.followUps.length > 0 && (
           <div className="panel p-4">
             <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Suggested follow-ups
+              Preguntas de seguimiento
             </h4>
             <div className="space-y-2">
               {answer.followUps.map((q) => (

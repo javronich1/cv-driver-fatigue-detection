@@ -8,9 +8,9 @@ import { SourceKindBadge } from "@/components/Sources";
 import { IconAlert } from "@/components/icons";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
-  known: { label: "Known issue", cls: "border-signal-warn/30 bg-signal-warn/10 text-signal-warn" },
-  "by-design": { label: "By design", cls: "border-signal-info/30 bg-signal-info/10 text-signal-info" },
-  "fixed-in-patch": { label: "Fixed in patch", cls: "border-signal-ok/30 bg-signal-ok/10 text-signal-ok" },
+  known: { label: "Problema conocido", cls: "border-signal-warn/30 bg-signal-warn/10 text-signal-warn" },
+  "by-design": { label: "Por diseño", cls: "border-signal-info/30 bg-signal-info/10 text-signal-info" },
+  "fixed-in-patch": { label: "Resuelto en patch", cls: "border-signal-ok/30 bg-signal-ok/10 text-signal-ok" },
 };
 
 export default function KnownIssuesPage() {
@@ -30,9 +30,9 @@ export default function KnownIssuesPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Known issues"
-        title="Known issues & gotchas"
-        subtitle="Environment-specific patterns distilled from official readmes and clearly-labelled community tech notes. These are framed honestly as patterns to check — not universal root causes."
+        eyebrow="Problemas conocidos"
+        title="Problemas conocidos y gotchas"
+        subtitle="Patrones específicos del entorno destilados de readmes oficiales y tech notes de comunidad claramente etiquetadas. Se enmarcan honestamente como patrones a revisar, no como causas raíz universales."
       />
 
       <div className="space-y-4">
@@ -50,9 +50,9 @@ export default function KnownIssuesPage() {
               </h3>
 
               <dl className="mt-3 space-y-3">
-                <Row label="Symptom" value={k.symptom} />
-                <Row label="Cause" value={k.cause} />
-                <Row label="Workaround" value={k.workaround} />
+                <Row label="Síntoma" value={k.symptom} />
+                <Row label="Causa" value={k.cause} />
+                <Row label="Solución" value={k.workaround} />
               </dl>
 
               <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.05] pt-3">

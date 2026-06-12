@@ -9,13 +9,13 @@ import PageHeader from "@/components/PageHeader";
 import { IconSpark, IconArrow } from "@/components/icons";
 
 const EXAMPLES = [
-  "What is a DI Object?",
-  "Difference between Model View and Deployment View",
-  "What is Autobind?",
-  "Why is my object Bad quality?",
-  "What does AlarmModeCmd do?",
-  "Why won't my historized data appear?",
-  "Deployment says cannot communicate with remote node",
+  "¿Qué es un DI Object?",
+  "Diferencia entre Model View y Deployment View",
+  "¿Qué es Autobind?",
+  "¿Por qué mi objeto está en Bad quality?",
+  "¿Qué hace AlarmModeCmd?",
+  "¿Por qué no aparecen mis datos historizados?",
+  "El despliegue dice cannot communicate with remote node",
 ];
 
 interface Turn {
@@ -60,15 +60,15 @@ function AskInner() {
   return (
     <div>
       <PageHeader
-        eyebrow="Ask mode"
-        title="Ask a technical question"
-        subtitle="Structured, source-grounded answers about AVEVA Application Server / System Platform — concept explanations and first-line troubleshooting."
+        eyebrow="Modo Preguntar"
+        title="Haz una pregunta técnica"
+        subtitle="Respuestas estructuradas y fundamentadas sobre AVEVA Application Server / OMI / System Platform — explicaciones de conceptos y troubleshooting de primera línea."
       />
 
       {turns.length === 0 && (
         <div className="panel mb-6 p-5 sm:p-6">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Try one of these
+            Prueba con una de estas
           </p>
           <div className="flex flex-wrap gap-2">
             {EXAMPLES.map((ex) => (
@@ -89,7 +89,7 @@ function AskInner() {
           <div key={i} className="space-y-4">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-base-700 text-xs font-bold text-slate-300">
-                You
+                Tú
               </span>
               <p className="pt-1 text-[15px] font-semibold text-slate-100">
                 {turn.query}
@@ -120,7 +120,7 @@ function AskInner() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about objects, deployment, OI/OPC, historian, alarms, security…"
+            placeholder="Pregunta sobre objects, deployment, OI/OPC, historian, alarmas, seguridad…"
             className="flex-1 bg-transparent px-1 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
           />
           <button

@@ -1,77 +1,80 @@
 import { Runbook } from "./types";
 
-// Curated, support-oriented runbooks. Each is grounded in official AVEVA docs
-// (and clearly-labelled community tech notes where useful). They encode the
-// "what to check first → confirm → escalate" flow a senior support engineer
-// would follow. They are heuristics, not guarantees — the UI frames them as
-// "most likely / check first".
+// Runbooks curados orientados a soporte. Cada uno está fundamentado en docs
+// oficiales de AVEVA (y tech notes de comunidad claramente etiquetadas). Codifican
+// el flujo "qué revisar primero → confirmar → escalar" que seguiría un ingeniero
+// de soporte sénior. Son heurísticas, no garantías: la UI las enmarca como
+// "más probable / revisa primero".
+//
+// Los nombres de herramientas, conceptos y los mensajes de error literales se
+// mantienen en inglés porque así aparecen en el producto.
 
 export const RUNBOOKS: Runbook[] = [
   {
     id: "rb-deploy-remote-node",
-    title: "Deployment failed: cannot communicate with remote node",
-    category: "Deployment",
+    title: "Falla el despliegue: cannot communicate with remote node",
+    category: "Despliegue",
     topics: ["deployment", "runtime", "security"],
     severity: "high",
     symptom:
-      "Deploying a platform/engine fails with an error such as 'cannot communicate with remote node', 'unable to contact', or a timeout reaching the target node.",
+      "Desplegar un platform/engine falla con un error como 'cannot communicate with remote node', 'unable to contact' o un timeout al alcanzar el nodo destino.",
     likelyCauses: [
-      "Name resolution / DNS or hosts-file mismatch between GR node and target node",
-      "ArchestrA / bootstrap services not running on the target node",
-      "Firewall blocking ArchestrA communication ports between nodes",
-      "Service account credentials wrong, or the node not joined to the same aaAdministrators/aaConfigTools security context",
-      "Target WinPlatform not deployed (you tried to deploy an engine before its platform)",
-      "Time skew between nodes breaking authentication",
+      "Resolución de nombres / DNS o discrepancia del archivo hosts entre el nodo GR y el nodo destino",
+      "Servicios de ArchestrA / bootstrap no corriendo en el nodo destino",
+      "Firewall bloqueando la comunicación de ArchestrA entre nodos",
+      "Credenciales de la cuenta de servicio incorrectas, o el nodo no está en el mismo contexto de seguridad aaAdministrators/aaConfigTools",
+      "El WinPlatform destino no está desplegado (intentaste desplegar un engine antes que su platform)",
+      "Desfase horario entre nodos rompiendo la autenticación",
     ],
     firstTool: "OCMC (SMC)",
     steps: [
       {
-        title: "Confirm you can resolve and reach the node by name",
+        title: "Confirma que puedes resolver y alcanzar el nodo por nombre",
         detail:
-          "From the GR node, ping the target by the exact node name used in the WinPlatform object. DNS reply should be fast (best practice ≤ 4 s); flaky DNS is a classic cause. Many sites use a hosts file so name→IP stays stable if IPs change.",
+          "Desde el nodo GR, haz ping al destino con el nombre exacto usado en el objeto WinPlatform. La respuesta de DNS debe ser rápida (buena práctica ≤ 4 s); un DNS inestable es una causa clásica. Muchos sitios usan un archivo hosts para que el mapeo nombre→IP sea estable si cambian las IP.",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-deploy-errors", "comm-insource-deploy"],
       },
       {
-        title: "Verify the platform is deployed first, then the engine",
+        title: "Verifica que el platform esté desplegado primero, luego el engine",
         detail:
-          "Deploy order matters: the WinPlatform must be deployed and running before its AppEngines. In Deployment View, deploy the platform on its own, confirm it is running, then deploy the engines/objects.",
+          "El orden importa: el WinPlatform debe estar desplegado y corriendo antes que sus AppEngines. En la Deployment View, despliega el platform por separado, confirma que está corriendo y luego despliega los engines/objetos.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-sp-deployment"],
       },
       {
-        title: "Check ArchestrA / bootstrap services on the target",
+        title: "Revisa los servicios de ArchestrA / bootstrap en el destino",
         detail:
-          "On the target node confirm the ArchestrA services are running and the service logon credentials are correct. Verify NT SERVICE\\aaPIM is in the local Administrators group and the logged-in engineer is in both aaAdministrators and aaConfigTools.",
+          "En el nodo destino confirma que los servicios de ArchestrA están corriendo y que las credenciales de logon del servicio son correctas. Verifica que NT SERVICE\\aaPIM esté en el grupo local Administrators y que el ingeniero logueado esté en aaAdministrators y aaConfigTools.",
         tool: "Platform Manager",
         sourceIds: ["comm-insource-deploy", "doc-sp-deployment"],
       },
       {
-        title: "Check firewall and ports between nodes",
+        title: "Revisa el firewall y los puertos entre nodos",
         detail:
-          "Confirm the ArchestrA communication ports are open both directions through any host or network firewall. A one-way rule will let the platform appear reachable but fail to deploy.",
+          "Confirma que los puertos de comunicación de ArchestrA estén abiertos en ambos sentidos a través de cualquier firewall de host o de red. Una regla unidireccional hará que el platform parezca alcanzable pero falle al desplegar.",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-deploy-errors"],
       },
       {
-        title: "Read the exact error in Log Viewer on BOTH nodes",
+        title: "Lee el error exacto en Log Viewer en AMBOS nodos",
         detail:
-          "Open OCMC → Log Viewer on the GR node and the target node at the same time and re-deploy. The target-side log usually contains the real root cause (security, port, or credential message) that the IDE error hides.",
+          "Abre OCMC → Log Viewer en el nodo GR y en el nodo destino a la vez y vuelve a desplegar. El log del lado destino suele contener la causa raíz real (seguridad, puerto o credenciales) que el error del IDE oculta.",
         tool: "Log Viewer",
         sourceIds: ["doc-deploy-errors", "pdf-platform-manager"],
       },
       {
-        title: "Verify time sync and security context",
+        title: "Verifica la sincronización horaria y el contexto de seguridad",
         detail:
-          "Significant clock skew between nodes breaks authenticated communication. Confirm both nodes share a time source and belong to the same Galaxy security configuration / domain context.",
+          "Un desfase de reloj significativo entre nodos rompe la comunicación autenticada. Confirma que ambos nodos comparten una fuente de tiempo y pertenecen a la misma configuración de seguridad de la Galaxy / contexto de dominio.",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-sp-deployment"],
       },
     ],
     confirmResolution:
-      "The platform deploys and shows running in Platform Manager, engines go OnScan, and a re-deploy of a single object succeeds without the communication error.",
+      "El platform despliega y aparece corriendo en Platform Manager, los engines pasan a OnScan y un re-despliegue de un solo objeto tiene éxito sin el error de comunicación.",
     escalateWhen:
-      "Services, ports, credentials, name resolution and time sync all check out but deployment still times out — capture synchronized Log Viewer exports from both nodes and escalate with the network/AD team.",
+      "Servicios, puertos, credenciales, resolución de nombres y sincronización horaria están todos correctos pero el despliegue sigue dando timeout: captura exports sincronizados de Log Viewer de ambos nodos y escala con el equipo de red/AD.",
     sourceIds: ["doc-deploy-errors", "doc-sp-deployment", "comm-insource-deploy"],
     keywords: [
       "cannot communicate with remote node",
@@ -85,536 +88,536 @@ export const RUNBOOKS: Runbook[] = [
   },
   {
     id: "rb-bad-quality",
-    title: "Object attribute shows Bad quality",
-    category: "Bad quality / no data",
+    title: "Un atributo de objeto muestra Bad quality",
+    category: "Bad quality / sin datos",
     topics: ["runtime", "di", "oi", "troubleshooting"],
     severity: "medium",
     symptom:
-      "An attribute (e.g. PV) shows Bad (or Uncertain/Initializing) quality in Object Viewer or on a graphic, so the value cannot be trusted.",
+      "Un atributo (p. ej. PV) muestra calidad Bad (o Uncertain/Initializing) en Object Viewer o en un gráfico, por lo que no se puede confiar en el valor.",
     likelyCauses: [
-      "Upstream DI/OI link is down (OI Server not running or not connected to the device)",
-      "I/O reference string is wrong (typo, wrong item/topic, wrong source object)",
-      "Source object or engine is OffScan",
-      "Item does not exist in the OI Server / OPC namespace",
-      "Security or licensing limiting the OI Server",
+      "El enlace DI/OI aguas arriba está caído (OI Server no corriendo o sin conexión al dispositivo)",
+      "La cadena de referencia de I/O es incorrecta (error de tipeo, item/topic equivocado, objeto fuente equivocado)",
+      "El objeto fuente o el engine está OffScan",
+      "El item no existe en el namespace del OI Server / OPC",
+      "Seguridad o licenciamiento limitando el OI Server",
     ],
     firstTool: "Object Viewer",
     steps: [
       {
-        title: "Confirm where quality goes Bad",
+        title: "Confirma dónde la calidad pasa a Bad",
         detail:
-          "In Object Viewer, watch the attribute and its InputSource/I-O reference. Bad quality almost always originates upstream — at the DI object or OI Server — not at the consuming object.",
+          "En Object Viewer, observa el atributo y su InputSource/referencia de I/O. La calidad Bad casi siempre se origina aguas arriba (en el DI object o el OI Server), no en el objeto que consume.",
         tool: "Object Viewer",
         sourceIds: ["pdf-object-viewer", "doc-opc-source"],
       },
       {
-        title: "Check the I/O reference string",
+        title: "Revisa la cadena de referencia de I/O",
         detail:
-          "Verify the attribute's input source points at the correct DI object item (correct OPCClient/DDESuiteLinkClient instance, topic/group, and item name). A single typo yields Bad quality. Autobound references can drift if the source namespace changed.",
+          "Verifica que el input source del atributo apunte al item correcto del DI object (instance de OPCClient/DDESuiteLinkClient, topic/group e item correctos). Un solo error de tipeo da calidad Bad. Las referencias de autobind pueden quedar desfasadas si cambió el namespace fuente.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide", "doc-opc-source"],
       },
       {
-        title: "Verify scan state of the source",
+        title: "Verifica el scan state de la fuente",
         detail:
-          "Ensure the DI object, the consuming object, and their AppEngine are OnScan. An OffScan source produces Bad/last-known quality. After a reboot, engines may be OffScan.",
+          "Asegúrate de que el DI object, el objeto que consume y su AppEngine estén OnScan. Una fuente OffScan produce calidad Bad/último valor conocido. Tras un reinicio, los engines pueden quedar OffScan.",
         tool: "Platform Manager",
         sourceIds: ["doc-offscan", "pdf-platform-manager"],
       },
       {
-        title: "Diagnose the OI Server directly",
+        title: "Diagnostica el OI Server directamente",
         detail:
-          "In OI Server Manager, check the OI Server is running and connected to the device, and use its diagnostics to confirm the specific item updates with Good quality at the driver level. If it is Bad here, the problem is device/driver-side.",
+          "En OI Server Manager, revisa que el OI Server esté corriendo y conectado al dispositivo, y usa sus diagnósticos para confirmar que el item específico se actualiza con calidad Good a nivel de driver. Si está Bad aquí, el problema es del lado dispositivo/driver.",
         tool: "OI Server Manager",
         sourceIds: ["doc-opc-source", "doc-opcua-source"],
       },
       {
-        title: "Check the item exists and the device responds",
+        title: "Revisa que el item exista y que el dispositivo responda",
         detail:
-          "Confirm the item/tag actually exists in the OI Server namespace and the PLC/device is reachable and powered. A non-existent item or dead device gives Bad quality even with perfect references.",
+          "Confirma que el item/tag realmente existe en el namespace del OI Server y que el PLC/dispositivo está accesible y encendido. Un item inexistente o un dispositivo muerto da calidad Bad incluso con referencias perfectas.",
         tool: "OI Server Manager",
         sourceIds: ["doc-opc-source"],
       },
     ],
     confirmResolution:
-      "The attribute shows Good quality with a fresh timestamp in Object Viewer, and the value tracks the device.",
+      "El atributo muestra calidad Good con una marca de tiempo fresca en Object Viewer, y el valor sigue al dispositivo.",
     escalateWhen:
-      "The OI Server diagnostics show the item Good but the App Server attribute stays Bad after references and scan state are verified — escalate with the reference string, OI Server config, and Object Viewer capture.",
+      "Los diagnósticos del OI Server muestran el item Good pero el atributo de App Server sigue Bad tras verificar referencias y scan state: escala con la cadena de referencia, la config del OI Server y la captura de Object Viewer.",
     sourceIds: ["pdf-object-viewer", "doc-opc-source", "doc-offscan"],
     keywords: ["bad quality", "uncertain", "initializing", "no value", "i/o reference", "inputsource"],
   },
   {
     id: "rb-no-data-object-viewer",
-    title: "No data visible in Object Viewer",
-    category: "Bad quality / no data",
+    title: "No se ven datos en Object Viewer",
+    category: "Bad quality / sin datos",
     topics: ["runtime", "troubleshooting"],
     severity: "medium",
     symptom:
-      "Object Viewer shows the attribute but with no updating value, dashes, or a stale value/timestamp.",
+      "Object Viewer muestra el atributo pero sin valor que se actualice, con guiones, o con un valor/marca de tiempo congelados.",
     likelyCauses: [
-      "Object or its AppEngine is OffScan",
-      "Object is not actually deployed (config-only) or deploy is pending",
-      "Wrong attribute path watched (template vs instance, wrong instance)",
-      "Engine not running / platform down",
-      "Upstream Bad quality (see Bad quality runbook)",
+      "El objeto o su AppEngine está OffScan",
+      "El objeto no está realmente desplegado (solo config) o el despliegue está pendiente",
+      "Ruta de atributo equivocada observada (template vs instance, instance equivocada)",
+      "Engine no corriendo / platform caído",
+      "Calidad Bad aguas arriba (ver runbook de Bad quality)",
     ],
     firstTool: "Object Viewer",
     steps: [
       {
-        title: "Confirm the object is deployed and running",
+        title: "Confirma que el objeto está desplegado y corriendo",
         detail:
-          "In Platform Manager, verify the WinPlatform is running, the AppEngine is started and OnScan, and the object shows a running/deployed state — not 'not deployed' or 'shut down'.",
+          "En Platform Manager, verifica que el WinPlatform está corriendo, el AppEngine está iniciado y OnScan, y el objeto muestra un estado corriendo/desplegado, no 'not deployed' ni 'shut down'.",
         tool: "Platform Manager",
         sourceIds: ["pdf-platform-manager", "doc-offscan"],
       },
       {
-        title: "Verify scan state",
+        title: "Verifica el scan state",
         detail:
-          "Check ScanState on the object and engine. OnScan = processing; OffScan = idle with no live updates. Set OnScan via Platform Manager or ScanStateCmd and watch the value resume.",
+          "Revisa el ScanState del objeto y del engine. OnScan = procesando; OffScan = inactivo sin actualizaciones en vivo. Pon OnScan vía Platform Manager o ScanStateCmd y observa cómo se reanuda el valor.",
         tool: "Platform Manager",
         sourceIds: ["doc-offscan", "pdf-scripting"],
       },
       {
-        title: "Confirm you are watching the right path",
+        title: "Confirma que observas la ruta correcta",
         detail:
-          "Make sure you added the deployed instance's attribute (not the template) and the correct instance name. Re-add from the running object to be sure.",
+          "Asegúrate de haber añadido el atributo de la instance desplegada (no el template) y el nombre de instance correcto. Vuelve a añadirlo desde el objeto en marcha para estar seguro.",
         tool: "Object Viewer",
         sourceIds: ["pdf-object-viewer"],
       },
       {
-        title: "Check the timestamp and quality",
+        title: "Revisa la marca de tiempo y la calidad",
         detail:
-          "A frozen timestamp with Good quality means the source stopped updating; Bad quality means an upstream comms issue — follow the Bad quality runbook.",
+          "Una marca de tiempo congelada con calidad Good significa que la fuente dejó de actualizarse; calidad Bad significa un problema de comunicación aguas arriba: sigue el runbook de Bad quality.",
         tool: "Object Viewer",
         sourceIds: ["pdf-object-viewer"],
       },
     ],
     confirmResolution:
-      "Values update live with a moving timestamp and Good quality in Object Viewer.",
+      "Los valores se actualizan en vivo con una marca de tiempo en movimiento y calidad Good en Object Viewer.",
     escalateWhen:
-      "Object is confirmed deployed, OnScan, on a running engine, correctly addressed, yet still shows no data — capture Platform Manager state and Object Viewer and escalate.",
+      "El objeto está confirmado como desplegado, OnScan, en un engine corriendo y correctamente direccionado, pero sigue sin mostrar datos: captura el estado de Platform Manager y Object Viewer y escala.",
     sourceIds: ["pdf-object-viewer", "pdf-platform-manager", "doc-offscan"],
     keywords: ["no data", "no value", "dashes", "stale", "frozen", "not updating", "object viewer"],
   },
   {
     id: "rb-oi-opc-not-updating",
-    title: "OI.SIM / OPC client not updating",
-    category: "OI / OPC / DI communication",
+    title: "OI.SIM / cliente OPC no se actualiza",
+    category: "Comunicación OI / OPC / DI",
     topics: ["oi", "di", "troubleshooting"],
     severity: "medium",
     symptom:
-      "An OI Server (e.g. OI.SIM or a real driver) or OPC client object is configured but values do not change / show Bad quality.",
+      "Un OI Server (p. ej. OI.SIM o un driver real) o un objeto cliente OPC está configurado pero los valores no cambian / muestran calidad Bad.",
     likelyCauses: [
-      "OI Server not activated/running, or no client subscriptions",
-      "DI object pointing at the wrong server node or program ID / UA endpoint",
-      "Topic/group or update interval misconfigured",
-      "Item names do not match the OI Server namespace",
-      "Protocol mismatch (DDE vs SuiteLink, OPC DA vs UA) or security/cert issue for OPC UA",
+      "OI Server no activado/corriendo, o sin suscripciones de cliente",
+      "El DI object apunta al nodo de servidor equivocado o al program ID / endpoint UA equivocado",
+      "Topic/group o intervalo de actualización mal configurado",
+      "Los nombres de items no coinciden con el namespace del OI Server",
+      "Desajuste de protocolo (DDE vs SuiteLink, OPC DA vs UA) o problema de seguridad/certificado para OPC UA",
     ],
     firstTool: "OI Server Manager",
     steps: [
       {
-        title: "Confirm the OI Server is running and has clients",
+        title: "Confirma que el OI Server está corriendo y tiene clientes",
         detail:
-          "In OI Server Manager, verify the server is activated/running and that the DI object's client connection appears. No subscriptions usually means the DI object is not deployed/OnScan or is pointed at the wrong server.",
+          "En OI Server Manager, verifica que el servidor está activado/corriendo y que aparece la conexión de cliente del DI object. Sin suscripciones suele significar que el DI object no está desplegado/OnScan o apunta al servidor equivocado.",
         tool: "OI Server Manager",
         sourceIds: ["doc-opc-source"],
       },
       {
-        title: "Validate items in the server's diagnostics",
+        title: "Valida los items en los diagnósticos del servidor",
         detail:
-          "Use the OI Server diagnostics to confirm the specific items update with Good quality. If they update here but not in App Server, the problem is the DI object reference, not the driver.",
+          "Usa los diagnósticos del OI Server para confirmar que los items específicos se actualizan con calidad Good. Si se actualizan aquí pero no en App Server, el problema es la referencia del DI object, no el driver.",
         tool: "OI Server Manager",
         sourceIds: ["doc-opc-source", "doc-opcua-source"],
       },
       {
-        title: "Check the DI object configuration",
+        title: "Revisa la configuración del DI object",
         detail:
-          "Confirm the DI object (OPCClient/DDESuiteLinkClient/OPC UA) targets the correct server node and endpoint/ProgID, with the right topic/group, update interval, and protocol (SuiteLink recommended over DDE).",
+          "Confirma que el DI object (OPCClient/DDESuiteLinkClient/OPC UA) apunta al nodo de servidor y endpoint/ProgID correctos, con el topic/group, intervalo de actualización y protocolo correctos (se recomienda SuiteLink sobre DDE).",
         tool: "ArchestrA IDE",
         sourceIds: ["comm-ddesuitelink", "doc-opcua-source"],
       },
       {
-        title: "For OPC UA, verify endpoint, security and certificates",
+        title: "Para OPC UA, verifica endpoint, seguridad y certificados",
         detail:
-          "OPC UA needs a reachable endpoint and trusted certificates on both ends. A rejected/untrusted certificate or wrong security policy silently blocks updates — check the UA service and trust lists.",
+          "OPC UA necesita un endpoint accesible y certificados confiables en ambos extremos. Un certificado rechazado/no confiable o una política de seguridad equivocada bloquea silenciosamente las actualizaciones: revisa el servicio UA y las trust lists.",
         tool: "OI Server Manager",
         sourceIds: ["doc-opcua-service", "doc-opcua-source"],
       },
     ],
     confirmResolution:
-      "Items update with Good quality in OI Server diagnostics and the App Server attributes track them live.",
+      "Los items se actualizan con calidad Good en los diagnósticos del OI Server y los atributos de App Server los siguen en vivo.",
     escalateWhen:
-      "Driver diagnostics show items Good and the DI object is correctly configured, but App Server still does not update — escalate with the OI Server config export and DI object reference details.",
+      "Los diagnósticos del driver muestran los items Good y el DI object está bien configurado, pero App Server sigue sin actualizarse: escala con el export de config del OI Server y los detalles de referencia del DI object.",
     sourceIds: ["doc-opc-source", "doc-opcua-source", "comm-ddesuitelink"],
     keywords: ["oi.sim", "opc not updating", "opc ua", "suitelink", "dde", "no subscription", "program id", "endpoint"],
   },
   {
     id: "rb-historian-no-data",
-    title: "Historized data not appearing in Historian",
-    category: "Historian / historization",
+    title: "Datos historizados no aparecen en el Historian",
+    category: "Historian / historización",
     topics: ["historian", "troubleshooting"],
     severity: "medium",
     symptom:
-      "An attribute is configured for history but trends are flat/empty in Historian Client Web, or logging stopped.",
+      "Un atributo está configurado para history pero las tendencias están planas/vacías en Historian Client Web, o el registro se detuvo.",
     likelyCauses: [
-      "History not actually enabled on the attribute, or the engine has no Historian assigned",
-      "Engine/object OffScan so no values are produced to log",
-      "Historian stuck in store-and-forward (forward step failing) — SF data pending",
-      "IDAS connection problem between source and Historian",
-      "Historian storage subsystem not running / disk or licensing issue",
+      "History no está realmente habilitado en el atributo, o el engine no tiene un Historian asignado",
+      "Engine/objeto OffScan, así que no se producen valores que registrar",
+      "Historian atascado en store-and-forward (el paso de reenvío falla): SF data pending",
+      "Problema de conexión de IDAS entre la fuente y el Historian",
+      "Subsistema de almacenamiento del Historian no corriendo / problema de disco o licencia",
     ],
     firstTool: "Historian Client Web",
     steps: [
       {
-        title: "Confirm history is enabled and an Historian is assigned",
+        title: "Confirma que history está habilitado y hay un Historian asignado",
         detail:
-          "In the IDE, verify the attribute has History enabled and that its AppEngine is configured with the correct Historian. No assigned Historian = nothing to log to.",
+          "En el IDE, verifica que el atributo tiene history habilitado y que su AppEngine está configurado con el Historian correcto. Sin Historian asignado no hay dónde registrar.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-historian-concepts", "doc-historian-issues"],
       },
       {
-        title: "Verify the source is producing Good values",
+        title: "Verifica que la fuente produce valores Good",
         detail:
-          "In Object Viewer confirm the attribute is OnScan and Good quality. Historian logs what the engine produces — OffScan/Bad source means nothing meaningful to store.",
+          "En Object Viewer confirma que el atributo está OnScan y con calidad Good. El Historian registra lo que produce el engine: una fuente OffScan/Bad no deja nada significativo que almacenar.",
         tool: "Object Viewer",
         sourceIds: ["pdf-object-viewer", "doc-offscan"],
       },
       {
-        title: "Check for store-and-forward backlog",
+        title: "Revisa si hay backlog de store-and-forward",
         detail:
-          "Inspect the store-forward folders for pending *.dat files (e.g. original.dat) and the SysStatusSFDataPending tag. A historian 'stuck in store-forward' often needs the engine stopped and started (via Platform Manager) to resume forwarding.",
+          "Inspecciona las carpetas de store-forward por archivos *.dat pendientes (p. ej. original.dat) y el tag SysStatusSFDataPending. Un historian 'atascado en store-forward' suele requerir parar y arrancar el engine (vía Platform Manager) para reanudar el reenvío.",
         tool: "Platform Manager",
         sourceIds: ["doc-idas-sf", "doc-historian-issues"],
       },
       {
-        title: "Troubleshoot the IDAS connection",
+        title: "Diagnostica la conexión de IDAS",
         detail:
-          "Confirm IDAS is connected and acquiring. Use the Historian IDAS troubleshooting steps to validate the acquisition path from source to storage.",
+          "Confirma que IDAS está conectado y adquiriendo. Usa los pasos de troubleshooting de IDAS del Historian para validar la ruta de adquisición desde la fuente hasta el almacenamiento.",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-idas-troubleshoot"],
       },
       {
-        title: "Confirm the Historian storage engine is healthy",
+        title: "Confirma que el motor de almacenamiento del Historian está sano",
         detail:
-          "Check the Historian status (storage running, disk space, licensing). If storage is down or out of license, recent data will not be retained.",
+          "Revisa el estado del Historian (almacenamiento corriendo, espacio en disco, licencia). Si el almacenamiento está caído o sin licencia, los datos recientes no se conservarán.",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-historian-issues"],
       },
     ],
     confirmResolution:
-      "New values appear in Historian Client Web trends in real time and any store-forward backlog drains.",
+      "Los nuevos valores aparecen en tiempo real en las tendencias de Historian Client Web y cualquier backlog de store-forward se drena.",
     escalateWhen:
-      "History is enabled, source is Good/OnScan, IDAS is connected and storage is healthy, but data still does not land — escalate with SF folder contents, IDAS status, and the tag's history config.",
+      "History está habilitado, la fuente está Good/OnScan, IDAS conectado y el almacenamiento sano, pero los datos siguen sin llegar: escala con el contenido de la carpeta SF, el estado de IDAS y la config de history del tag.",
     sourceIds: ["doc-historian-issues", "doc-idas-troubleshoot", "doc-idas-sf", "pdf-historian-concepts"],
     keywords: ["no history", "trend flat", "historian not logging", "store and forward", "sysstatussfdatapending", "idas", "historization missing"],
   },
   {
     id: "rb-alarm-not-visible",
-    title: "Alarm configured but not visible/active",
-    category: "Alarms",
+    title: "Alarma configurada pero no visible/activa",
+    category: "Alarmas",
     topics: ["alarms", "troubleshooting"],
     severity: "medium",
     symptom:
-      "An alarm is configured on an attribute but never appears in the Alarm Control / active alarm list when the condition occurs.",
+      "Una alarma está configurada en un atributo pero nunca aparece en el Alarm Control / lista de alarmas activas cuando ocurre la condición.",
     likelyCauses: [
-      "Alarm disabled, inhibited (AlarmInhibit), or shelved",
-      "Attribute quality is Bad/Uncertain, so the alarm logic does not evaluate",
-      "Alarm limit/condition not actually reached (EU range/scaling wrong)",
-      "Alarm Client query filter excludes the object/area/priority",
-      "Object/engine OffScan, so the alarm condition is never evaluated",
+      "Alarma deshabilitada, inhibida (AlarmInhibit) o en shelving",
+      "La calidad del atributo es Bad/Uncertain, así que la lógica de alarma no evalúa",
+      "El límite/condición de alarma no se alcanza realmente (rango EU/escalado incorrecto)",
+      "El filtro del Alarm Client excluye el objeto/área/prioridad",
+      "Objeto/engine OffScan, así que la condición de alarma nunca se evalúa",
     ],
     firstTool: "Object Viewer",
     steps: [
       {
-        title: "Check enable / inhibit / shelve state",
+        title: "Revisa el estado de enable / inhibit / shelve",
         detail:
-          "Verify the alarm is enabled and not inhibited (AlarmInhibit) or shelved. Inhibited/shelved alarms will not annunciate. Remember default shelving applies to Medium/Low; Critical/High are typically not shelve-enabled.",
+          "Verifica que la alarma está habilitada y no inhibida (AlarmInhibit) ni en shelving. Las alarmas inhibidas/en shelving no se anuncian. Recuerda que por defecto el shelving aplica a Medium/Low; Critical/High normalmente no están habilitadas para shelving.",
         tool: "Object Viewer",
         sourceIds: ["doc-alarm-inhibit", "doc-alarms-impl", "pdf-alarm-control"],
       },
       {
-        title: "Confirm the underlying value and quality",
+        title: "Confirma el valor y la calidad subyacentes",
         detail:
-          "In Object Viewer confirm the attribute is OnScan, Good quality, and actually crosses the configured limit. Bad quality or an out-of-range EU scaling can prevent the alarm evaluating as expected.",
+          "En Object Viewer confirma que el atributo está OnScan, con calidad Good, y que realmente cruza el límite configurado. Una calidad Bad o un escalado EU fuera de rango puede impedir que la alarma evalúe como se espera.",
         tool: "Object Viewer",
         sourceIds: ["pdf-object-viewer", "doc-alarms-impl"],
       },
       {
-        title: "Check the Alarm Client query/filter",
+        title: "Revisa el query/filtro del Alarm Client",
         detail:
-          "The alarm may be active but filtered out. Verify the Alarm Control query string includes the object's Galaxy/area and the alarm's priority/severity range.",
+          "La alarma puede estar activa pero filtrada. Verifica que el query string del Alarm Control incluye la Galaxy/área del objeto y el rango de prioridad/severidad de la alarma.",
         tool: "Object Viewer",
         sourceIds: ["pdf-alarm-control"],
       },
       {
-        title: "Verify alarm configuration matches a working object",
+        title: "Verifica que la config de alarma coincide con un objeto que funciona",
         detail:
-          "Compare against an attribute whose alarm works. SMC logs sometimes show why a specific attribute's alarm description/condition does not surface at runtime.",
+          "Compara con un atributo cuya alarma sí funciona. Los logs del SMC a veces muestran por qué la descripción/condición de alarma de un atributo concreto no aparece en runtime.",
         tool: "Log Viewer",
         sourceIds: ["doc-alarms-sysobjects", "doc-alarms-impl"],
       },
     ],
     confirmResolution:
-      "Driving the value past the limit produces an active alarm visible in the Alarm Control, and it clears/returns to normal correctly.",
+      "Llevar el valor más allá del límite produce una alarma activa visible en el Alarm Control, y se limpia/vuelve a normal correctamente.",
     escalateWhen:
-      "The alarm is enabled, not inhibited/shelved, value is Good and over limit, and the query includes it — but it still never activates. Escalate with the alarm config and an SMC log capture.",
+      "La alarma está habilitada, no inhibida/en shelving, el valor es Good y supera el límite, y el query la incluye, pero aun así nunca se activa: escala con la config de alarma y una captura de los logs del SMC.",
     sourceIds: ["doc-alarms-impl", "doc-alarm-inhibit", "pdf-alarm-control", "doc-alarms-sysobjects"],
     keywords: ["alarm not showing", "alarm not active", "alarminhibit", "shelved", "alarmmodecmd", "no alarm", "alarm missing"],
   },
   {
     id: "rb-onscan-offscan",
-    title: "AppEngine / object OnScan vs OffScan confusion",
+    title: "Confusión OnScan vs OffScan de AppEngine / objeto",
     category: "Platform / AppEngine / scan state",
     topics: ["runtime", "troubleshooting"],
     severity: "low",
     symptom:
-      "Objects are deployed but nothing runs/updates; scripts don't execute; references won't resolve — often after a reboot or manual stop.",
+      "Los objetos están desplegados pero nada corre/actualiza; los scripts no se ejecutan; las referencias no resuelven, a menudo tras un reinicio o una parada manual.",
     likelyCauses: [
-      "AppEngine or object left OffScan (idle, not executing)",
-      "Engines not set OnScan after a node reboot, breaking reference resolution",
-      "Platform stopped, so all hosted engines are down",
-      "Object deployed but never set OnScan",
+      "AppEngine u objeto quedó OffScan (inactivo, sin ejecutar)",
+      "Engines no puestos OnScan tras un reinicio de nodo, rompiendo la resolución de referencias",
+      "Platform detenido, así que todos los engines alojados están caídos",
+      "Objeto desplegado pero nunca puesto OnScan",
     ],
     firstTool: "Platform Manager",
     steps: [
       {
-        title: "Check platform, engine and object scan states",
+        title: "Revisa los scan states de platform, engine y objeto",
         detail:
-          "In Platform Manager review the hierarchy: platform running? engine started and OnScan? object OnScan? OnScan means normal processing; OffScan means idle/not executing.",
+          "En Platform Manager revisa la jerarquía: ¿platform corriendo? ¿engine iniciado y OnScan? ¿objeto OnScan? OnScan significa procesamiento normal; OffScan significa inactivo/sin ejecutar.",
         tool: "Platform Manager",
         sourceIds: ["pdf-platform-manager", "doc-offscan"],
       },
       {
-        title: "Set engines OnScan after a reboot",
+        title: "Pon los engines OnScan tras un reinicio",
         detail:
-          "After rebooting a platform you must set each engine OnScan. Failing to do so causes reference-resolution issues across objects. Set the engine OnScan and let objects resume.",
+          "Tras reiniciar un platform debes poner cada engine OnScan. No hacerlo causa problemas de resolución de referencias en los objetos. Pon el engine OnScan y deja que los objetos se reanuden.",
         tool: "Platform Manager",
         sourceIds: ["doc-offscan", "doc-as-resolved"],
       },
       {
-        title: "Use ScanStateCmd / OnScan scripts intentionally",
+        title: "Usa ScanStateCmd / scripts OnScan intencionalmente",
         detail:
-          "ScanStateCmd toggles an object OnScan/OffScan. OnScan scripts run the first time an engine executes the object after it goes OnScan — useful for initialisation. Don't leave objects OffScan unless intentionally idled.",
+          "ScanStateCmd alterna un objeto OnScan/OffScan. Los scripts OnScan corren la primera vez que un engine ejecuta el objeto tras pasar a OnScan, útil para inicialización. No dejes objetos OffScan salvo que estén intencionalmente inactivos.",
         tool: "Object Viewer",
         sourceIds: ["pdf-scripting", "doc-offscan"],
       },
     ],
     confirmResolution:
-      "Platform, engines and objects are all OnScan; values update, scripts run, and references resolve.",
+      "Platform, engines y objetos están todos OnScan; los valores se actualizan, los scripts corren y las referencias resuelven.",
     escalateWhen:
-      "Engines are OnScan and the platform is running but objects still won't execute or resolve references — capture Platform Manager state and Log Viewer and escalate.",
+      "Los engines están OnScan y el platform corriendo pero los objetos aún no ejecutan ni resuelven referencias: captura el estado de Platform Manager y Log Viewer y escala.",
     sourceIds: ["doc-offscan", "pdf-platform-manager", "pdf-scripting"],
     keywords: ["onscan", "offscan", "scanstate", "scanstatecmd", "not running", "after reboot", "reference resolution"],
   },
   {
     id: "rb-checkin-version-mismatch",
-    title: "Checked out / checked in / deployment version mismatch",
+    title: "Desajuste de versión: check out / check in / despliegue",
     category: "Check-in / check-out / config vs runtime",
     topics: ["object-management", "deployment", "troubleshooting"],
     severity: "low",
     symptom:
-      "Changes don't appear at runtime, deploy is greyed out, an object can't be edited, or runtime behaviour doesn't match the latest configuration.",
+      "Los cambios no aparecen en runtime, el deploy está deshabilitado, un objeto no se puede editar, o el comportamiento en runtime no coincide con la última configuración.",
     likelyCauses: [
-      "Object checked out (by you or someone else) so edits/deploy are blocked",
-      "Edited config not checked in, so the deployable version is stale",
-      "Object deployed at an older version — config changed but not re-deployed",
-      "Pending undeploy/redeploy or a partial cascade deploy",
+      "Objeto en check out (por ti o por alguien más) bloqueando ediciones/deploy",
+      "Config editada sin check in, así que la versión desplegable está obsoleta",
+      "Objeto desplegado en una versión anterior: la config cambió pero no se re-desplegó",
+      "Undeploy/redeploy pendiente o un cascade deploy parcial",
     ],
     firstTool: "ArchestrA IDE",
     steps: [
       {
-        title: "Check the object's check-out state and owner",
+        title: "Revisa el estado de check out del objeto y su dueño",
         detail:
-          "In the IDE, see whether the object is checked out and by whom. A checked-out object can't be fully deployed/edited by others. The owner must check it in (or an admin can Undo Check Out, discarding changes).",
+          "En el IDE, mira si el objeto está en check out y por quién. Un objeto en check out no puede ser desplegado/editado del todo por otros. El dueño debe hacer check in (o un admin puede hacer Undo Check Out, descartando los cambios).",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide"],
       },
       {
-        title: "Check in pending changes, then deploy",
+        title: "Haz check in de los cambios pendientes, luego despliega",
         detail:
-          "Config edits only become deployable after check-in. Check in the object (and any modified templates), then deploy so the runtime version matches the configuration.",
+          "Las ediciones de config solo se vuelven desplegables tras el check in. Haz check in del objeto (y de cualquier template modificado), luego despliega para que la versión de runtime coincida con la configuración.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide"],
       },
       {
-        title: "Compare deployed vs configured version",
+        title: "Compara la versión desplegada vs la configurada",
         detail:
-          "Confirm the deployed version equals the latest checked-in version. If config changed since the last deploy, re-deploy the object (cascade deploy if templates changed).",
+          "Confirma que la versión desplegada es igual a la última versión con check in. Si la config cambió desde el último deploy, re-despliega el objeto (cascade deploy si cambiaron templates).",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide", "doc-sp-deployment"],
       },
     ],
     confirmResolution:
-      "Object is checked in, deployed version equals configured version, and runtime behaviour reflects the latest changes.",
+      "El objeto tiene check in, la versión desplegada es igual a la configurada, y el comportamiento en runtime refleja los últimos cambios.",
     escalateWhen:
-      "Versions match and the object is checked in/re-deployed but runtime still differs — capture the object's deployment state and escalate (possible Galaxy/object corruption).",
+      "Las versiones coinciden y el objeto tiene check in/re-deploy pero el runtime sigue difiriendo: captura el estado de despliegue del objeto y escala (posible corrupción de Galaxy/objeto).",
     sourceIds: ["pdf-ide", "doc-sp-deployment"],
     keywords: ["checked out", "check in", "undo check out", "version mismatch", "config vs runtime", "deploy greyed out", "changes not applied"],
   },
   {
     id: "rb-csv-import-conflict",
-    title: "Import from CSV / package conflict handling",
+    title: "Import desde CSV / manejo de conflictos de package",
     category: "Import / export / CSV",
     topics: ["csv", "object-management", "troubleshooting"],
     severity: "low",
     symptom:
-      "A Galaxy import (CSV/aaPKG/Galaxy dump) fails, partially applies, or raises object/template conflict prompts.",
+      "Un import a la Galaxy (CSV/aaPKG/Galaxy dump) falla, se aplica parcialmente o lanza avisos de conflicto de objeto/template.",
     likelyCauses: [
-      "Template/object already exists with a different definition (version conflict)",
-      "CSV column/format or attribute path errors",
-      "Required parent template missing (import order/dependency)",
-      "Objects checked out, blocking modification during import",
-      "Encoding / locale issues in the CSV",
+      "Template/objeto ya existe con una definición distinta (conflicto de versión)",
+      "Errores de columna/formato del CSV o de ruta de atributo",
+      "Falta un parent template requerido (orden/dependencia del import)",
+      "Objetos en check out, bloqueando la modificación durante el import",
+      "Problemas de codificación / locale en el CSV",
     ],
     firstTool: "ArchestrA IDE",
     steps: [
       {
-        title: "Read the conflict prompt carefully and choose intent",
+        title: "Lee con cuidado el aviso de conflicto y elige la intención",
         detail:
-          "On import, the IDE prompts how to resolve conflicts (skip / overwrite / create new). Decide deliberately: overwriting a template affects all derived objects. In production, prefer importing into a test Galaxy first.",
+          "Al importar, el IDE pregunta cómo resolver conflictos (skip / overwrite / create new). Decide deliberadamente: sobrescribir un template afecta a todos los objetos derivados. En producción, prefiere importar primero a una Galaxy de prueba.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide"],
       },
       {
-        title: "Ensure dependencies/parents exist and order is correct",
+        title: "Asegura que existan dependencias/padres y el orden correcto",
         detail:
-          "Import base templates before derived templates and instances. A missing parent template causes failures or orphaned objects.",
+          "Importa los base templates antes que los derived templates e instances. Un parent template faltante causa fallos u objetos huérfanos.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide"],
       },
       {
-        title: "Validate the CSV structure",
+        title: "Valida la estructura del CSV",
         detail:
-          "Confirm column headers, attribute paths, data types and encoding match what the importer expects. A single malformed row can abort or partially apply the import — check the import log.",
+          "Confirma que los encabezados de columna, rutas de atributos, tipos de datos y codificación coinciden con lo que espera el importador. Una sola fila malformada puede abortar o aplicar parcialmente el import: revisa el log del import.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide"],
       },
       {
-        title: "Make sure target objects are checked in",
+        title: "Asegura que los objetos destino tengan check in",
         detail:
-          "Objects checked out by another user can't be modified by the import. Ensure they're checked in (or Undo Check Out) before re-running.",
+          "Los objetos en check out por otro usuario no pueden ser modificados por el import. Asegúrate de que tengan check in (o haz Undo Check Out) antes de reintentar.",
         tool: "ArchestrA IDE",
         sourceIds: ["pdf-ide"],
       },
     ],
     confirmResolution:
-      "Import completes without unresolved conflicts, the import log is clean, and imported objects open and deploy correctly.",
+      "El import completa sin conflictos sin resolver, el log del import está limpio y los objetos importados abren y despliegan correctamente.",
     escalateWhen:
-      "Dependencies, format and check-out state are all correct but the import still fails or corrupts objects — back up the Galaxy, capture the import log, and escalate.",
+      "Dependencias, formato y estado de check out están todos correctos pero el import sigue fallando o corrompe objetos: respalda la Galaxy, captura el log del import y escala.",
     sourceIds: ["pdf-ide"],
     keywords: ["csv import", "aapkg", "package conflict", "galaxy import", "overwrite template", "import failed", "export import"],
   },
   {
     id: "rb-security-login",
-    title: "Security login / authentication confusion",
-    category: "Security / login / authentication",
+    title: "Confusión de login / autenticación de seguridad",
+    category: "Seguridad / login / autenticación",
     topics: ["security", "troubleshooting"],
     severity: "medium",
     symptom:
-      "Can't log in to the Galaxy/runtime, missing permissions, or 'access denied' deploying or opening the IDE.",
+      "No se puede iniciar sesión en la Galaxy/runtime, faltan permisos, o 'access denied' al desplegar o abrir el IDE.",
     likelyCauses: [
-      "Galaxy security mode (None / Galaxy / OS Group / OS User) not matching how you're authenticating",
-      "User not in the right aaAdministrators / aaConfigTools / OS security group",
-      "Domain vs local account mismatch, or password/account expired",
-      "Security model not deployed after a change",
-      "Time skew or domain trust issue breaking authentication between nodes",
+      "El modo de seguridad de la Galaxy (None / Galaxy / OS Group / OS User) no coincide con cómo te autenticas",
+      "Usuario no está en el grupo correcto aaAdministrators / aaConfigTools / grupo de OS",
+      "Desajuste de cuenta de dominio vs local, o contraseña/cuenta expirada",
+      "Modelo de seguridad no desplegado tras un cambio",
+      "Desfase horario o problema de trust de dominio rompiendo la autenticación entre nodos",
     ],
     firstTool: "ArchestrA IDE",
     steps: [
       {
-        title: "Identify the Galaxy's security mode",
+        title: "Identifica el modo de seguridad de la Galaxy",
         detail:
-          "Check the configured security mode (None, Galaxy, OS Group based, OS User based). How you must log in — and which accounts have rights — depends entirely on this mode.",
+          "Revisa el modo de seguridad configurado (None, Galaxy, OS Group based, OS User based). Cómo debes iniciar sesión, y qué cuentas tienen derechos, depende enteramente de este modo.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-sp-deployment"],
       },
       {
-        title: "Verify group membership for the account",
+        title: "Verifica la pertenencia a grupos de la cuenta",
         detail:
-          "Confirm the user is in the required groups: aaAdministrators and aaConfigTools for engineering, plus any OS groups the security model maps to roles. NT SERVICE\\aaPIM should be in local Administrators on each node.",
+          "Confirma que el usuario está en los grupos requeridos: aaAdministrators y aaConfigTools para ingeniería, además de cualquier grupo de OS que el modelo de seguridad mapee a roles. NT SERVICE\\aaPIM debe estar en el grupo local Administrators de cada nodo.",
         tool: "ArchestrA IDE",
         sourceIds: ["comm-insource-deploy", "doc-sp-deployment"],
       },
       {
-        title: "Re-deploy the security model after changes",
+        title: "Re-despliega el modelo de seguridad tras cambios",
         detail:
-          "Security/role changes must be deployed to take effect at runtime. If you changed the model but didn't deploy it, runtime still enforces the old rules.",
+          "Los cambios de seguridad/roles deben desplegarse para tener efecto en runtime. Si cambiaste el modelo pero no lo desplegaste, el runtime sigue aplicando las reglas antiguas.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-sp-deployment"],
       },
       {
-        title: "Check domain/account health and time sync",
+        title: "Revisa la salud de cuenta/dominio y la sincronización horaria",
         detail:
-          "Confirm the account isn't locked/expired, domain trust is healthy, and node clocks are in sync. Authentication across nodes fails with significant time skew.",
+          "Confirma que la cuenta no esté bloqueada/expirada, que el trust de dominio esté sano y que los relojes de los nodos estén sincronizados. La autenticación entre nodos falla con un desfase horario significativo.",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-sp-deployment"],
       },
     ],
     confirmResolution:
-      "The user logs in with the expected role, can open/edit/deploy as permitted, and no access-denied errors occur.",
+      "El usuario inicia sesión con el rol esperado, puede abrir/editar/desplegar según lo permitido, y no ocurren errores de access denied.",
     escalateWhen:
-      "Mode, group membership and deployment are correct and accounts are healthy but authentication still fails — escalate with the security mode, group memberships, and Log Viewer auth errors to AD/security.",
+      "Modo, pertenencia a grupos y despliegue son correctos y las cuentas están sanas pero la autenticación sigue fallando: escala con el modo de seguridad, las membresías de grupo y los errores de auth de Log Viewer a AD/seguridad.",
     sourceIds: ["doc-sp-deployment", "comm-insource-deploy"],
     keywords: ["login failed", "access denied", "authentication", "security mode", "aaadministrators", "aaconfigtools", "permissions", "galaxy security"],
   },
   {
     id: "rb-omi-viewapp-deploy",
-    title: "OMI ViewApp won't deploy or changes don't appear",
+    title: "Una ViewApp de OMI no despliega o los cambios no aparecen",
     category: "OMI / ViewApp",
     topics: ["omi", "deployment", "troubleshooting"],
     severity: "medium",
     symptom:
-      "An OMI ViewApp fails to deploy, won't launch, or configuration changes (layouts, apps, content) don't show up at the operator station.",
+      "Una ViewApp de OMI falla al desplegar, no se lanza, o los cambios de configuración (layouts, apps, contenido) no aparecen en la estación de operador.",
     likelyCauses: [
-      "ViewApp not assigned to a ViewEngine, or the platform/ViewEngine isn't deployed and running",
-      "ViewApp checked out or changed but not checked in / re-deployed (version mismatch)",
-      "Referenced layout, screen profile, or OMI app is missing, broken, or itself not deployed",
-      "Graphic/content references resolve to Bad quality objects (upstream data issue)",
-      "Client cache/old ViewApp version still running on the station",
+      "ViewApp no asignada a un ViewEngine, o el platform/ViewEngine no está desplegado y corriendo",
+      "ViewApp en check out o modificada pero sin check in / re-deploy (desajuste de versión)",
+      "Layout, screen profile u OMI app referenciado falta, está roto o sin desplegar",
+      "Las referencias de gráficos/contenido resuelven a objetos con calidad Bad (problema de datos aguas arriba)",
+      "Caché del cliente/versión vieja de la ViewApp aún corriendo en la estación",
     ],
     firstTool: "ArchestrA IDE",
     steps: [
       {
-        title: "Confirm assignment and that the ViewEngine is running",
+        title: "Confirma la asignación y que el ViewEngine está corriendo",
         detail:
-          "In Deployment View, verify the ViewApp is assigned to a ViewEngine on the operator station's WinPlatform, and that the platform and ViewEngine are deployed and running (OnScan) in Platform Manager.",
+          "En la Deployment View, verifica que la ViewApp está asignada a un ViewEngine en el WinPlatform de la estación de operador, y que el platform y el ViewEngine están desplegados y corriendo (OnScan) en Platform Manager.",
         tool: "Platform Manager",
         sourceIds: ["doc-omi-deploy-viewapp", "pdf-platform-manager"],
       },
       {
-        title: "Check in changes, then re-deploy the ViewApp",
+        title: "Haz check in de los cambios, luego re-despliega la ViewApp",
         detail:
-          "ViewApp edits only take effect after check-in and (re)deploy. Confirm it's checked in and the deployed version matches the configuration; cascade-deploy if shared layouts/apps changed.",
+          "Las ediciones de la ViewApp solo tienen efecto tras el check in y el (re)deploy. Confirma que tiene check in y que la versión desplegada coincide con la configuración; haz cascade deploy si cambiaron layouts/apps compartidos.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-omi-deploy-viewapp", "pdf-ide"],
       },
       {
-        title: "Validate referenced layouts, screen profiles and apps",
+        title: "Valida layouts, screen profiles y apps referenciados",
         detail:
-          "Open the ViewApp and confirm each referenced layout, screen profile, and OMI app exists and is valid. A layout dropped as content inside another layout is a known trouble spot — verify it's configured correctly.",
+          "Abre la ViewApp y confirma que cada layout, screen profile y OMI app referenciado existe y es válido. Un layout colocado como contenido dentro de otro layout es un punto problemático conocido: verifica que esté bien configurado.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-omi-nav", "doc-omi-nav-controls"],
       },
       {
-        title: "Check data quality behind the graphics",
+        title: "Revisa la calidad de datos detrás de los gráficos",
         detail:
-          "If the ViewApp launches but panels are blank/red, the bound objects may be Bad quality or OffScan. Use Object Viewer to confirm the underlying attributes are Good/OnScan (see the Bad quality runbook).",
+          "Si la ViewApp se lanza pero los paneles salen en blanco/rojo, los objetos enlazados pueden estar en calidad Bad u OffScan. Usa Object Viewer para confirmar que los atributos subyacentes están Good/OnScan (ver el runbook de Bad quality).",
         tool: "Object Viewer",
         sourceIds: ["pdf-object-viewer", "doc-offscan"],
       },
       {
-        title: "Relaunch the client to clear a stale ViewApp",
+        title: "Relanza el cliente para limpiar una ViewApp obsoleta",
         detail:
-          "Close and relaunch the ViewApp on the station so it loads the freshly deployed version rather than a cached one. Confirm the version/timestamp updates.",
+          "Cierra y relanza la ViewApp en la estación para que cargue la versión recién desplegada en lugar de una en caché. Confirma que la versión/marca de tiempo se actualiza.",
         tool: "Platform Manager",
         sourceIds: ["doc-omi-resolved", "doc-omi-issues"],
       },
     ],
     confirmResolution:
-      "The ViewApp deploys, the ViewEngine runs it, and the latest layouts/apps/content appear with live Good-quality data at the station.",
+      "La ViewApp despliega, el ViewEngine la ejecuta y los últimos layouts/apps/contenido aparecen con datos en vivo de calidad Good en la estación.",
     escalateWhen:
-      "Assignment, check-in/redeploy, references and data quality all check out but the ViewApp still won't deploy or refresh — capture Log Viewer on the station and the ViewApp deployment state and escalate.",
+      "Asignación, check-in/redeploy, referencias y calidad de datos están todos correctos pero la ViewApp sigue sin desplegar o refrescar: captura Log Viewer en la estación y el estado de despliegue de la ViewApp y escala.",
     sourceIds: ["doc-omi-deploy-viewapp", "doc-omi-issues", "doc-omi-resolved"],
     keywords: [
       "viewapp won't deploy",
@@ -627,54 +630,54 @@ export const RUNBOOKS: Runbook[] = [
   },
   {
     id: "rb-omi-webclient",
-    title: "OMI web client won't connect or load a ViewApp",
+    title: "El OMI web client no conecta o no carga una ViewApp",
     category: "OMI / ViewApp",
     topics: ["omi", "security", "troubleshooting"],
     severity: "medium",
     symptom:
-      "The OMI web client fails to connect, shows a blank/partial ViewApp, or errors when loading in the browser.",
+      "El OMI web client falla al conectar, muestra una ViewApp en blanco/parcial, o da error al cargar en el navegador.",
     likelyCauses: [
-      "OMI web services / OPC UA service not running or not reachable from the client",
-      "Certificate not trusted between browser/client and the web/UA service",
-      "Authentication / login mode mismatch for the web client",
-      "Using a feature/app not supported in the web client (documented limitations)",
-      "Network/firewall or URL/port issue to the web client endpoint",
+      "Servicios web de OMI / servicio OPC UA no corriendo o inaccesibles desde el cliente",
+      "Certificado no confiable entre el navegador/cliente y el servicio web/UA",
+      "Desajuste de autenticación / modo de login para el web client",
+      "Uso de una función/app no soportada en el web client (limitaciones documentadas)",
+      "Problema de red/firewall o de URL/puerto al endpoint del web client",
     ],
     firstTool: "OCMC (SMC)",
     steps: [
       {
-        title: "Confirm the OMI web services and OPC UA service are running",
+        title: "Confirma que los servicios web de OMI y el servicio OPC UA corren",
         detail:
-          "Verify the OMI web client services and the OPC UA service are deployed and running on the server, and reachable from the client machine (URL/port).",
+          "Verifica que los servicios del OMI web client y el servicio OPC UA están desplegados y corriendo en el servidor, y accesibles desde la máquina cliente (URL/puerto).",
         tool: "OCMC (SMC)",
         sourceIds: ["doc-omi-webclient-troubleshoot", "doc-opcua-service"],
       },
       {
-        title: "Check certificate trust",
+        title: "Revisa la confianza del certificado",
         detail:
-          "A rejected/untrusted certificate silently blocks the web client. Confirm the certificate is valid and trusted by the browser/client and that the UA endpoint's certificate is accepted.",
+          "Un certificado rechazado/no confiable bloquea silenciosamente el web client. Confirma que el certificado es válido y confiable para el navegador/cliente y que el certificado del endpoint UA está aceptado.",
         tool: "OI Server Manager",
         sourceIds: ["doc-omi-webclient-troubleshoot", "doc-opcua-service"],
       },
       {
-        title: "Verify authentication / login configuration",
+        title: "Verifica la configuración de autenticación / login",
         detail:
-          "Confirm the web client login mode and credentials match the Galaxy security configuration. Auth mismatches present as connect/login failures rather than ViewApp errors.",
+          "Confirma que el modo de login del web client y las credenciales coinciden con la configuración de seguridad de la Galaxy. Los desajustes de auth se presentan como fallos de conexión/login más que como errores de la ViewApp.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-omi-webclient-troubleshoot", "doc-sp-deployment"],
       },
       {
-        title: "Rule out unsupported web client features",
+        title: "Descarta funciones no soportadas del web client",
         detail:
-          "If only part of the ViewApp loads, check the documented OMI web client limitations — some apps/features aren't supported in the browser and need the local client.",
+          "Si solo carga parte de la ViewApp, revisa las limitaciones documentadas del OMI web client: algunas apps/funciones no están soportadas en el navegador y requieren el cliente local.",
         tool: "ArchestrA IDE",
         sourceIds: ["doc-omi-webclient-limits"],
       },
     ],
     confirmResolution:
-      "The browser connects, authenticates, and loads the ViewApp with live data and supported apps rendering correctly.",
+      "El navegador conecta, autentica y carga la ViewApp con datos en vivo y las apps soportadas renderizando correctamente.",
     escalateWhen:
-      "Services are running, certificate is trusted, auth is correct and the features used are supported, but the web client still fails — capture the browser error, server logs, and escalate.",
+      "Los servicios corren, el certificado es confiable, la auth es correcta y las funciones usadas están soportadas, pero el web client sigue fallando: captura el error del navegador, los logs del servidor y escala.",
     sourceIds: ["doc-omi-webclient-troubleshoot", "doc-omi-webclient-limits"],
     keywords: [
       "omi web client",

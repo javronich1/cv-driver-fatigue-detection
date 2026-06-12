@@ -15,18 +15,20 @@ import {
   IconSun,
   IconMoon,
   IconLayers,
+  IconUsers,
 } from "./icons";
 
 const NAV = [
-  { href: "/", label: "Home", icon: IconSpark },
-  { href: "/ask", label: "Ask", icon: IconChat },
-  { href: "/troubleshoot", label: "Troubleshoot", icon: IconWrench },
+  { href: "/", label: "Inicio", icon: IconSpark },
+  { href: "/ask", label: "Preguntar", icon: IconChat },
+  { href: "/troubleshoot", label: "Troubleshooting", icon: IconWrench },
   { href: "/runbooks", label: "Runbooks", icon: IconBook },
-  { href: "/docs", label: "Docs / Search", icon: IconSearch },
-  { href: "/manuals", label: "Manuals", icon: IconLayers },
-  { href: "/glossary", label: "Glossary", icon: IconList },
-  { href: "/known-issues", label: "Known issues", icon: IconAlert },
-  { href: "/about", label: "Settings / About", icon: IconInfo },
+  { href: "/docs", label: "Docs / Buscar", icon: IconSearch },
+  { href: "/manuals", label: "Manuales", icon: IconLayers },
+  { href: "/community", label: "Comunidad", icon: IconUsers },
+  { href: "/glossary", label: "Glosario", icon: IconList },
+  { href: "/known-issues", label: "Problemas conocidos", icon: IconAlert },
+  { href: "/about", label: "Ajustes / Acerca de", icon: IconInfo },
 ];
 
 function ThemeToggle() {
@@ -45,7 +47,7 @@ function ThemeToggle() {
   return (
     <button onClick={toggle} className="nav-link w-full" aria-label="Toggle theme">
       {theme === "dark" ? <IconSun /> : <IconMoon />}
-      <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+      <span>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
     </button>
   );
 }
@@ -99,8 +101,8 @@ export default function Sidebar() {
         <div className="mt-6 border-t border-white/[0.06] pt-3">
           <ThemeToggle />
           <p className="px-3 pt-3 text-[11px] leading-relaxed text-slate-500">
-            Grounded in official AVEVA docs + curated runbooks. Always verify
-            against your environment.
+            Fundamentado en docs oficiales de AVEVA + runbooks curados. Verifica
+            siempre contra tu entorno.
           </p>
         </div>
       </aside>
@@ -119,7 +121,7 @@ function Brand() {
           Archestr<span className="text-accent">Aide</span>
         </span>
         <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
-          AVEVA Support Copilot
+          Copilot de Soporte AVEVA
         </span>
       </span>
     </Link>

@@ -64,15 +64,15 @@ export function composeAnswer(
       query,
       mode: "general",
       shortAnswer:
-        "I couldn't find this in the curated AVEVA knowledge base. I won't guess at AVEVA-specific settings, attribute names, or menu paths that aren't in a trusted source.",
+        "No encontré esto en la base de conocimiento curada de AVEVA. No voy a inventar settings, nombres de atributos ni rutas de menú específicas de AVEVA que no estén en una fuente confiable.",
       sections: [
         {
-          heading: "What you can do",
+          heading: "Qué puedes hacer",
           kind: "list",
           items: [
-            "Rephrase using AVEVA terms (e.g. object, attribute, AppEngine, OI Server, Galaxy).",
-            "Browse Runbooks or the Glossary for the closest topic.",
-            "Add the relevant manual/PDF to the knowledge base so this becomes answerable (see README → ingestion).",
+            "Reformula usando términos de AVEVA (p. ej. object, attribute, AppEngine, OI Server, Galaxy).",
+            "Explora los Runbooks o el Glosario para el tema más cercano.",
+            "Sube el manual/PDF relevante a la base de conocimiento para que esto sea respondible (ver la página Manuales).",
           ],
         },
       ],
@@ -80,12 +80,12 @@ export function composeAnswer(
       tools: [],
       confidence: "low",
       confidenceNote:
-        "No grounded source matched this query, so no AVEVA-specific claim is being made.",
+        "Ninguna fuente fundamentada coincidió con esta consulta, así que no se hace ninguna afirmación específica de AVEVA.",
       relatedTerms: [],
       followUps: [
-        "What is a DI Object?",
-        "Why is my object Bad quality?",
-        "Deployment cannot communicate with remote node",
+        "¿Qué es un DI Object?",
+        "¿Por qué mi objeto está en Bad quality?",
+        "El despliegue dice cannot communicate with remote node",
       ],
     };
   }
@@ -116,17 +116,17 @@ export function composeAnswer(
       shortAnswer: rb.symptom,
       sections: [
         {
-          heading: "Most likely causes",
+          heading: "Causas más probables",
           kind: "list",
           items: rb.likelyCauses,
         },
         {
-          heading: `What to check first — open ${rb.firstTool}`,
+          heading: `Qué revisar primero — abre ${rb.firstTool}`,
           kind: "text",
           body: rb.steps[0]?.detail || "",
         },
         {
-          heading: "Step-by-step troubleshooting",
+          heading: "Troubleshooting paso a paso",
           kind: "steps",
           steps: rb.steps.map((s) => ({
             title: s.title,
@@ -135,12 +135,12 @@ export function composeAnswer(
           })),
         },
         {
-          heading: "How to confirm it's resolved",
+          heading: "Cómo confirmar que está resuelto",
           kind: "text",
           body: rb.confirmResolution,
         },
         {
-          heading: "When to escalate",
+          heading: "Cuándo escalar",
           kind: "text",
           body: rb.escalateWhen,
         },
@@ -149,7 +149,7 @@ export function composeAnswer(
       tools,
       confidence,
       confidenceNote:
-        "This is a curated troubleshooting heuristic ('most likely / check first'), grounded in the cited sources — not a guarantee of root cause for your specific environment.",
+        "Esto es una heurística de troubleshooting curada ('más probable / revisa primero'), fundamentada en las fuentes citadas — no una garantía de la causa raíz para tu entorno específico.",
       relatedTerms: relatedTermsFor(
         rb.topics.flatMap((t) =>
           GLOSSARY.filter((g) => g.topics.includes(t)).map((g) => g.id)
@@ -166,13 +166,13 @@ export function composeAnswer(
   if (top.chunk.ref?.type === "glossary") {
     const g = GLOSSARY_BY_ID[top.chunk.ref.id];
     const sections: AnswerSection[] = [
-      { heading: "Simple explanation", kind: "text", body: g.explanation },
+      { heading: "Explicación simple", kind: "text", body: g.explanation },
     ];
     if (g.example)
-      sections.push({ heading: "Practical example", kind: "text", body: g.example });
+      sections.push({ heading: "Ejemplo práctico", kind: "text", body: g.example });
     if (g.related && g.related.length)
       sections.push({
-        heading: "Related concepts",
+        heading: "Conceptos relacionados",
         kind: "list",
         items: g.related
           .map((id) => GLOSSARY_BY_ID[id]?.term)
@@ -200,16 +200,16 @@ export function composeAnswer(
       mode: "troubleshoot",
       shortAnswer: k.symptom,
       sections: [
-        { heading: "Environment", kind: "text", body: k.environment },
-        { heading: "Cause", kind: "text", body: k.cause },
-        { heading: "Workaround", kind: "text", body: k.workaround },
-        { heading: "Status", kind: "text", body: k.status.replace("-", " ") },
+        { heading: "Entorno", kind: "text", body: k.environment },
+        { heading: "Causa", kind: "text", body: k.cause },
+        { heading: "Solución alternativa", kind: "text", body: k.workaround },
+        { heading: "Estado", kind: "text", body: k.status.replace("-", " ") },
       ],
       sources: dedupeSources(allSourceIds),
       tools: [],
       confidence,
       confidenceNote:
-        "Framed as an environment-specific known pattern from the cited readmes/tech notes.",
+        "Enmarcado como un patrón conocido específico del entorno, de los readmes/tech notes citados.",
       relatedTerms: [],
       followUps: results.slice(1, 4).map((r) => r.chunk.title),
       primaryRef: top.chunk.ref,
@@ -222,8 +222,8 @@ export function composeAnswer(
     query,
     mode: "general",
     shortAnswer: fromManual
-      ? "Here are the most relevant passages from the uploaded manuals for your question. These are direct excerpts — verify against the full source."
-      : "Here is the most relevant grounded material from the AVEVA knowledge base.",
+      ? "Aquí están los pasajes más relevantes de los manuales subidos para tu pregunta. Son extractos directos — verifícalos contra la fuente completa."
+      : "Aquí está el material fundamentado más relevante de la base de conocimiento de AVEVA.",
     sections: results.slice(0, 4).map((r) => ({
       heading: r.chunk.title,
       kind: "text" as const,

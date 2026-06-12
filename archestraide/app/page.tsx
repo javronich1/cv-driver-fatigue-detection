@@ -15,26 +15,26 @@ const QUICK = [
   {
     href: "/ask",
     icon: IconChat,
-    title: "Ask a technical question",
-    desc: "Structured, source-grounded answers for theory and runtime questions.",
+    title: "Haz una pregunta técnica",
+    desc: "Respuestas estructuradas y fundamentadas para preguntas de teoría y runtime.",
   },
   {
     href: "/troubleshoot",
     icon: IconWrench,
-    title: "Start troubleshooting",
-    desc: "Guided, checklist-style diagnostics for the most common failures.",
+    title: "Iniciar troubleshooting",
+    desc: "Diagnóstico guiado tipo checklist para las fallas más comunes.",
   },
   {
     href: "/runbooks",
     icon: IconBook,
-    title: "Browse runbooks",
-    desc: "Symptom → likely cause → checks → confirm → escalate.",
+    title: "Explorar runbooks",
+    desc: "Síntoma → causa probable → revisiones → confirmar → escalar.",
   },
   {
     href: "/docs",
     icon: IconSearch,
-    title: "Search manuals & docs",
-    desc: "Hybrid search across runbooks, concepts, and official AVEVA docs.",
+    title: "Buscar manuales y docs",
+    desc: "Búsqueda híbrida en runbooks, conceptos y docs oficiales de AVEVA.",
   },
 ];
 
@@ -58,7 +58,7 @@ export default function HomePage() {
         <div className="relative">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 text-xs font-medium text-accent-soft">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-            Internal support copilot · MVP
+            Copilot interno de soporte · MVP
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-50 sm:text-5xl">
             Archestr<span className="text-accent">Aide</span>
@@ -67,20 +67,21 @@ export default function HomePage() {
             AVEVA Application Server &amp; OMI Support Copilot
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-400">
-            An internal AVEVA Application Server &amp; OMI support copilot for
-            onboarding, theory questions, documentation search, and first-line
-            troubleshooting. Grounded in official AVEVA documentation and curated
-            runbooks — with clear separation of official facts from inferred
-            guidance. Upload your own training manuals to extend its knowledge.
+            Un copilot interno de soporte de AVEVA Application Server y OMI para
+            onboarding, preguntas de teoría, búsqueda de documentación y
+            troubleshooting de primera línea. Fundamentado en documentación
+            oficial de AVEVA y runbooks curados, con separación clara entre hechos
+            oficiales y guía inferida. Sube tus propios manuales de capacitación
+            para ampliar su conocimiento.
           </p>
           <div className="mt-6 max-w-2xl">
             <HeroSearch />
           </div>
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
             <span>{RUNBOOKS.length} runbooks</span>
-            <span>{GLOSSARY.length} concepts</span>
-            <span>Source-cited answers</span>
-            <span>Dark-mode-first</span>
+            <span>{GLOSSARY.length} conceptos</span>
+            <span>Respuestas con fuentes</span>
+            <span>Modo oscuro primero</span>
           </div>
         </div>
       </section>
@@ -88,7 +89,7 @@ export default function HomePage() {
       {/* Quick actions */}
       <section>
         <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">
-          Quick actions
+          Acciones rápidas
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {QUICK.map((q) => {
@@ -125,13 +126,13 @@ export default function HomePage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">
-            Common issues
+            Problemas comunes
           </h2>
           <Link
             href="/runbooks"
             className="text-xs font-medium text-accent hover:text-accent-soft"
           >
-            All runbooks →
+            Todos los runbooks →
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -152,7 +153,7 @@ export default function HomePage() {
                 {rb.symptom}
               </p>
               <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent">
-                Open runbook <IconArrow width={13} height={13} />
+                Abrir runbook <IconArrow width={13} height={13} />
               </span>
             </Link>
           ))}
@@ -167,21 +168,22 @@ export default function HomePage() {
           </span>
           <div>
             <p className="text-sm font-semibold text-slate-100">
-              Grounded retrieval, not a generic chatbot
+              Recuperación fundamentada, no un chatbot genérico
             </p>
             <p className="mt-0.5 max-w-xl text-xs leading-relaxed text-slate-400">
-              Every substantial answer cites its sources and flags confidence.
-              Upload your own Application Server / OMI training manuals to expand
-              coverage — they&apos;re indexed in your browser and cited in answers.
+              Cada respuesta sustancial cita sus fuentes y marca la confianza.
+              Sube tus propios manuales de capacitación de Application Server / OMI
+              para ampliar la cobertura — se indexan en tu navegador y se citan en
+              las respuestas.
             </p>
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <Link href="/manuals" className="btn btn-primary">
-            Upload manuals
+            Subir manuales
           </Link>
           <Link href="/about" className="btn btn-ghost">
-            How it works
+            Cómo funciona
           </Link>
         </div>
       </section>

@@ -6,32 +6,32 @@ const KIND_META: Record<
   { label: string; cls: string; official: boolean }
 > = {
   "official-doc": {
-    label: "Official doc",
+    label: "Doc oficial",
     cls: "border-signal-ok/30 bg-signal-ok/10 text-signal-ok",
     official: true,
   },
   "official-pdf": {
-    label: "Official manual",
+    label: "Manual oficial",
     cls: "border-signal-ok/30 bg-signal-ok/10 text-signal-ok",
     official: true,
   },
   uploaded: {
-    label: "Your manual",
+    label: "Tu manual",
     cls: "border-accent/30 bg-accent/10 text-accent-soft",
     official: true,
   },
   community: {
-    label: "Community / vendor",
+    label: "Comunidad / proveedor",
     cls: "border-signal-warn/30 bg-signal-warn/10 text-signal-warn",
     official: false,
   },
   runbook: {
-    label: "Curated runbook",
+    label: "Runbook curado",
     cls: "border-signal-info/30 bg-signal-info/10 text-signal-info",
     official: false,
   },
   glossary: {
-    label: "Concept page",
+    label: "Página de concepto",
     cls: "border-signal-info/30 bg-signal-info/10 text-signal-info",
     official: false,
   },
@@ -89,7 +89,7 @@ export function SourceList({ sources }: { sources: Source[] }) {
       {official.length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Official sources
+            Fuentes oficiales
           </p>
           {official.map((s) => (
             <SourceCard key={s.id} source={s} />
@@ -99,7 +99,7 @@ export function SourceList({ sources }: { sources: Source[] }) {
       {other.length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Inferred / community guidance
+            Guía inferida / de comunidad
           </p>
           {other.map((s) => (
             <SourceCard key={s.id} source={s} />

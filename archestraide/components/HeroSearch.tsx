@@ -21,11 +21,11 @@ export default function HeroSearch() {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Ask anything — e.g. 'Why is my object Bad quality?'"
+        placeholder="Pregunta lo que sea — p. ej. '¿Por qué mi objeto está en Bad quality?'"
         className="flex-1 bg-transparent px-1 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500"
       />
       <button type="submit" className="btn btn-primary px-4 py-2.5">
-        Ask <IconArrow width={16} height={16} />
+        Preguntar <IconArrow width={16} height={16} />
       </button>
     </form>
   );

@@ -5,10 +5,10 @@ import PageHeader from "@/components/PageHeader";
 import { RUNBOOKS } from "@/lib/knowledge/runbooks";
 import RunbookDetail, { SeverityChip } from "@/components/RunbookDetail";
 
-const CATEGORIES = ["All", ...Array.from(new Set(RUNBOOKS.map((r) => r.category)))];
+const CATEGORIES = ["Todos", ...Array.from(new Set(RUNBOOKS.map((r) => r.category)))];
 
 export default function RunbooksPage() {
-  const [cat, setCat] = useState("All");
+  const [cat, setCat] = useState("Todos");
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,14 +23,14 @@ export default function RunbooksPage() {
     }
   }, []);
 
-  const list = RUNBOOKS.filter((r) => cat === "All" || r.category === cat);
+  const list = RUNBOOKS.filter((r) => cat === "Todos" || r.category === cat);
 
   return (
     <div>
       <PageHeader
         eyebrow="Runbooks"
-        title="Support runbooks"
-        subtitle="Concise, support-oriented playbooks for the most common AVEVA Application Server issues. Each one runs symptom → likely causes → first tool → ordered checks → confirm → escalate."
+        title="Runbooks de soporte"
+        subtitle="Playbooks concisos orientados a soporte para los problemas más comunes de AVEVA Application Server y OMI. Cada uno recorre síntoma → causas probables → primera herramienta → revisiones ordenadas → confirmar → escalar."
       />
 
       <div className="mb-6 flex flex-wrap gap-2">

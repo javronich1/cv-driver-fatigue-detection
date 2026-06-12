@@ -28,11 +28,23 @@ manuals** (PDF), parsed in-browser and blended into answers.
 | **Docs / Search** | Hybrid keyword + concept search across runbooks, concepts, and known issues, with source-kind badges and snippet previews. |
 | **Glossary** | Curated concept pages spanning Application Server **and OMI** (Galaxy, Template, DI Object, Autobind, OnScan/OffScan, Historian, AlarmModeCmd, ViewApp, Layout, Screen Profile, Content Presenter, OMI Web Client, ViewEngine, …) with definition, explanation, example, related terms, and sources. |
 | **Manuals (upload)** | Upload your own AVEVA Application Server / OMI training PDFs. They're parsed **in the browser** (pdf.js), chunked, stored in local storage, and blended into Ask / Troubleshoot / Docs — cited as *Your manual*. Per-device (no backend); see ingestion guide for the shared/server-backed path. |
+| **Community** | Engineers submit their own problems/fixes, which are stored as **GitHub Issues** in the repo (shared with all users) and rendered as runbook-style guides. Submitting opens a pre-filled GitHub issue; reading is public (`lib/community.ts`). |
 | **Known issues** | Environment-specific gotchas distilled from official readmes and labelled community tech notes (Application Server + OMI). |
 | **Source grounding** | Every answer cites its sources, badged *Official doc / Official manual / Your manual / Community / Curated runbook*. Confidence is flagged (high / medium / low). |
 
 The UI is **dark-mode-first** (with a light mode), responsive, and built for long
-technical content.
+technical content. The interface and answer copy are in **Spanish**, while AVEVA
+technical/concept names and literal error strings are kept in **English** (e.g.
+Galaxy, Template, AppEngine, ViewApp, OnScan, `cannot communicate with remote
+node`).
+
+### Community submissions (shared storage)
+
+The live site is a static build with no backend, so community submissions use
+**GitHub Issues** as shared storage: the submit form opens a pre-filled issue
+(the submitter needs GitHub access to the repo); the Community page reads open
+issues from the **public** GitHub API and renders any carrying the ArchestrAide
+marker as troubleshooting guides for everyone. No secrets or database required.
 
 ---
 

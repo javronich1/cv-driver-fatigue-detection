@@ -12,16 +12,16 @@ import { IconSearch, IconExternal } from "@/components/icons";
 
 const KIND_FILTERS: { id: Chunk["kind"]; label: string }[] = [
   { id: "runbook", label: "Runbooks" },
-  { id: "glossary", label: "Glossary" },
-  { id: "known-issue", label: "Known issues" },
-  { id: "doc", label: "Your manuals" },
+  { id: "glossary", label: "Glosario" },
+  { id: "known-issue", label: "Problemas conocidos" },
+  { id: "doc", label: "Tus manuales" },
 ];
 
 const KIND_LABEL: Record<Chunk["kind"], string> = {
   runbook: "Runbook",
-  glossary: "Concept",
-  "known-issue": "Known issue",
-  doc: "Doc",
+  glossary: "Concepto",
+  "known-issue": "Problema conocido",
+  doc: "Manual",
 };
 
 export default function DocsPage() {
@@ -51,9 +51,9 @@ export default function DocsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Docs / Search"
-        title="Search the knowledge base"
-        subtitle="Hybrid keyword + concept search across runbooks, glossary concepts, known issues, and the official AVEVA documentation they cite. Use natural language, keywords, or an error string."
+        eyebrow="Docs / Buscar"
+        title="Busca en la base de conocimiento"
+        subtitle="Búsqueda híbrida por palabra clave + concepto en runbooks, conceptos del glosario, problemas conocidos y la documentación oficial de AVEVA que citan. Usa lenguaje natural, palabras clave o un mensaje de error."
       />
 
       <div className="panel mb-4 flex items-center gap-2 p-2">
@@ -64,7 +64,7 @@ export default function DocsPage() {
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="e.g. 'cannot communicate with remote node', 'autobind', 'store and forward'"
+          placeholder="p. ej. 'cannot communicate with remote node', 'autobind', 'store and forward'"
           className="flex-1 bg-transparent px-1 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
         />
       </div>
@@ -85,7 +85,7 @@ export default function DocsPage() {
 
       {q.trim() && (
         <p className="mb-4 text-xs text-slate-500">
-          {results.length} result{results.length === 1 ? "" : "s"} for “{q}”
+          {results.length} resultado{results.length === 1 ? "" : "s"} para “{q}”
         </p>
       )}
 
@@ -125,9 +125,9 @@ export default function DocsPage() {
         {q.trim() && results.length === 0 && (
           <div className="panel p-8 text-center">
             <p className="text-sm text-slate-400">
-              No matches. Try AVEVA-specific terms, or browse the{" "}
+              Sin coincidencias. Prueba términos específicos de AVEVA, o explora el{" "}
               <Link href="/glossary" className="text-accent">
-                glossary
+                glosario
               </Link>
               .
             </p>
@@ -137,7 +137,7 @@ export default function DocsPage() {
         {!q.trim() && (
           <div className="panel p-8 text-center">
             <p className="text-sm text-slate-400">
-              Start typing to search the knowledge base.
+              Empieza a escribir para buscar en la base de conocimiento.
             </p>
           </div>
         )}

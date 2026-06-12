@@ -98,3 +98,15 @@ export const IconShield = (p: P) => (
     <path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6l-7-3Z" />
   </svg>
 );
+export const IconUsers = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1" />
+    <circle cx="9" cy="7" r="3.5" />
+    <path d="M22 19v-1a4 4 0 0 0-3-3.9M15.5 3.6a4 4 0 0 1 0 7.8" />
+  </svg>
+);
+export const IconPlus = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);

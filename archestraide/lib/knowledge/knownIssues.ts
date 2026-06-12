@@ -1,110 +1,111 @@
 import { KnownIssue } from "./types";
 
-// Known issues / gotchas distilled from official readmes and community tech notes.
-// Framed honestly as environment-specific patterns, not universal truths.
+// Problemas conocidos / "gotchas" destilados de readmes oficiales y tech notes de
+// comunidad. Enmarcados honestamente como patrones específicos del entorno, no
+// como verdades universales. Nombres técnicos y mensajes en inglés.
 
 export const KNOWN_ISSUES: KnownIssue[] = [
   {
     id: "ki-reboot-offscan",
-    title: "After a platform reboot, engines come back OffScan",
+    title: "Tras reiniciar un platform, los engines vuelven OffScan",
     topics: ["runtime", "deployment"],
-    environment: "Any node after an OS reboot / power event",
+    environment: "Cualquier nodo tras un reinicio de SO / corte de energía",
     symptom:
-      "Following a reboot, objects don't update and references fail to resolve even though everything is deployed.",
+      "Tras un reinicio, los objetos no se actualizan y las referencias no resuelven aunque todo esté desplegado.",
     cause:
-      "Engines are not automatically set OnScan; until they are, reference resolution across objects can fail.",
+      "Los engines no se ponen OnScan automáticamente; hasta que lo hagas, la resolución de referencias entre objetos puede fallar.",
     workaround:
-      "In Platform Manager, set each AppEngine OnScan after the reboot. Consider startup procedures/runbooks so operators do this consistently.",
+      "En Platform Manager, pon cada AppEngine OnScan tras el reinicio. Considera procedimientos/runbooks de arranque para que los operadores lo hagan de forma consistente.",
     status: "by-design",
     sourceIds: ["doc-offscan", "doc-as-resolved"],
     keywords: ["reboot", "offscan", "reference resolution", "after restart"],
   },
   {
     id: "ki-sf-pending-after-upgrade",
-    title: "SysStatusSFDataPending true after a Historian upgrade",
+    title: "SysStatusSFDataPending true tras un upgrade del Historian",
     topics: ["historian"],
-    environment: "Tier-1 / Tier-2 Historian after version upgrade",
+    environment: "Historian Tier-1 / Tier-2 tras un upgrade de versión",
     symptom:
-      "After upgrading (e.g. 2023 P03 → 2023 R2), the system tag SysStatusSFDataPending is true and trends show gaps.",
+      "Tras un upgrade (p. ej. 2023 P03 → 2023 R2), el system tag SysStatusSFDataPending está en true y las tendencias muestran huecos.",
     cause:
-      "Store-and-forward backlog left pending after the upgrade; the forward step is not draining buffered data automatically.",
+      "Backlog de store-and-forward que quedó pendiente tras el upgrade; el paso de reenvío no está drenando los datos almacenados automáticamente.",
     workaround:
-      "Inspect the store-forward folders on the source for pending *.dat files (e.g. original.dat in A000000_001). Stop/start the engine (Platform Manager) to resume forwarding; confirm the SF tag returns to false. Reported via AVEVA community.",
+      "Inspecciona las carpetas de store-forward en la fuente por archivos *.dat pendientes (p. ej. original.dat en A000000_001). Para/arranca el engine (Platform Manager) para reanudar el reenvío; confirma que el tag SF vuelve a false. Reportado vía comunidad de AVEVA.",
     status: "known",
     sourceIds: ["doc-idas-sf", "doc-historian-issues"],
     keywords: ["sysstatussfdatapending", "store and forward", "upgrade", "trend gap", "historian backlog"],
   },
   {
     id: "ki-dns-slow-deploy",
-    title: "Slow DNS resolution causes intermittent deployment failures",
+    title: "Resolución DNS lenta causa fallos de despliegue intermitentes",
     topics: ["deployment"],
-    environment: "Multi-node, especially DHCP / changing IPs",
+    environment: "Multi-nodo, especialmente DHCP / IPs que cambian",
     symptom:
-      "Deployments intermittently fail to reach a remote node; sometimes succeed on retry.",
+      "Los despliegues fallan intermitentemente al alcanzar un nodo remoto; a veces tienen éxito al reintentar.",
     cause:
-      "Slow or unstable name resolution. Best practice is a DNS reply of 4 seconds or less; flaky DNS makes node communication unreliable.",
+      "Resolución de nombres lenta o inestable. La buena práctica es una respuesta de DNS de 4 segundos o menos; un DNS inestable hace poco confiable la comunicación entre nodos.",
     workaround:
-      "Use a hosts file so name→IP mappings stay stable if IP addresses change, and ensure DNS is fast and consistent across nodes. Community tech-note guidance (InSource TN 1283).",
+      "Usa un archivo hosts para que los mapeos nombre→IP sean estables si cambian las IP, y asegura que el DNS sea rápido y consistente entre nodos. Guía de tech note de comunidad (InSource TN 1283).",
     status: "known",
     sourceIds: ["comm-insource-deploy", "doc-deploy-errors"],
     keywords: ["dns", "slow deploy", "intermittent", "hosts file", "remote node"],
   },
   {
     id: "ki-shelve-severity",
-    title: "Critical/High alarms cannot be shelved by default",
+    title: "Las alarmas Critical/High no se pueden hacer shelving por defecto",
     topics: ["alarms"],
-    environment: "Default Alarm Control configuration",
+    environment: "Configuración por defecto del Alarm Control",
     symptom:
-      "Operators can shelve some alarms but the shelve action does nothing for Critical/High severity alarms.",
+      "Los operadores pueden hacer shelving de algunas alarmas pero la acción no hace nada para alarmas de severidad Critical/High.",
     cause:
-      "By design, only Medium and Low severity alarms are shelve-enabled by default; Critical and High are excluded to avoid hiding serious conditions.",
+      "Por diseño, solo las alarmas de severidad Medium y Low están habilitadas para shelving por defecto; Critical y High se excluyen para evitar ocultar condiciones serias.",
     workaround:
-      "This is intentional safety behaviour. If a Critical/High alarm is a nuisance, address the root cause or review the alarm rationalisation rather than forcing shelving.",
+      "Es un comportamiento de seguridad intencional. Si una alarma Critical/High es molesta, ataca la causa raíz o revisa la racionalización de alarmas en vez de forzar el shelving.",
     status: "by-design",
     sourceIds: ["pdf-alarm-control", "doc-alarms-impl"],
     keywords: ["shelve", "critical alarm", "high alarm", "cannot shelve", "severity"],
   },
   {
     id: "ki-checkout-blocks-deploy",
-    title: "Checked-out objects block edits and full deployment",
+    title: "Objetos en check out bloquean ediciones y despliegue completo",
     topics: ["object-management", "deployment"],
-    environment: "Multi-engineer Galaxy",
+    environment: "Galaxy con varios ingenieros",
     symptom:
-      "An object can't be edited or fully deployed; deploy options are greyed out.",
+      "Un objeto no se puede editar ni desplegar del todo; las opciones de deploy están deshabilitadas.",
     cause:
-      "The object is checked out (often by another engineer), locking it. Checked-out objects can't be modified or fully deployed by others.",
+      "El objeto está en check out (a menudo por otro ingeniero), bloqueándolo. Los objetos en check out no pueden ser modificados ni desplegados del todo por otros.",
     workaround:
-      "Have the owner check the object in. An administrator can Undo Check Out, but this discards the owner's in-progress changes — coordinate first.",
+      "Haz que el dueño haga check in del objeto. Un administrador puede hacer Undo Check Out, pero esto descarta los cambios en progreso del dueño: coordina primero.",
     status: "by-design",
     sourceIds: ["pdf-ide"],
     keywords: ["checked out", "locked object", "undo check out", "deploy greyed", "cannot edit"],
   },
   {
     id: "ki-omi-webclient-limits",
-    title: "Some OMI apps/features don't work in the web client",
+    title: "Algunas apps/funciones de OMI no funcionan en el web client",
     topics: ["omi"],
-    environment: "OMI web (browser) client",
+    environment: "OMI web client (navegador)",
     symptom:
-      "A ViewApp that works in the local OMI client renders partially or behaves differently in the browser web client.",
+      "Una ViewApp que funciona en el cliente local de OMI renderiza parcialmente o se comporta distinto en el web client del navegador.",
     cause:
-      "The OMI web client has documented limitations — not every OMI app or feature is supported in the browser compared with the local client.",
+      "El OMI web client tiene limitaciones documentadas: no todas las apps o funciones de OMI están soportadas en el navegador frente al cliente local.",
     workaround:
-      "Check the official 'General OMI web client limitations' list. For unsupported features, use the local client, or redesign the ViewApp to use web-supported apps. By design per AVEVA docs.",
+      "Revisa la lista oficial 'General OMI web client limitations'. Para funciones no soportadas, usa el cliente local o rediseña la ViewApp con apps soportadas por web. Por diseño según docs de AVEVA.",
     status: "by-design",
     sourceIds: ["doc-omi-webclient-limits"],
     keywords: ["omi web client", "not supported", "browser", "partial render", "viewapp web"],
   },
   {
     id: "ki-omi-layout-as-content",
-    title: "A layout dropped as content inside another layout misbehaves",
+    title: "Un layout colocado como contenido dentro de otro layout se comporta mal",
     topics: ["omi"],
-    environment: "OMI ViewApp with nested layouts",
+    environment: "ViewApp de OMI con layouts anidados",
     symptom:
-      "When a layout is used as content within another layout, panes/navigation don't render or interact as expected.",
+      "Cuando un layout se usa como contenido dentro de otro layout, los panes/navegación no renderizan ni interactúan como se espera.",
     cause:
-      "Nested layout-as-content is an advanced pattern with configuration constraints; misconfiguration leads to layout/navigation problems (reported in AVEVA community and addressed across patches).",
+      "El layout-como-contenido anidado es un patrón avanzado con restricciones de configuración; una mala configuración lleva a problemas de layout/navegación (reportado en comunidad de AVEVA y abordado en varios patches).",
     workaround:
-      "Review the layout/pane and navigation configuration against the OMI navigation-hierarchy docs; simplify the nesting or follow the supported Content Presenter pattern. Check OMI resolved-issues for your patch level.",
+      "Revisa la configuración del layout/pane y la navegación contra las docs de jerarquía de navegación de OMI; simplifica el anidamiento o sigue el patrón soportado de Content Presenter. Revisa los resolved-issues de OMI para tu nivel de patch.",
     status: "known",
     sourceIds: ["doc-omi-nav", "doc-omi-resolved"],
     keywords: ["nested layout", "layout as content", "content presenter", "navigation hierarchy", "panes"],

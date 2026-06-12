@@ -18,31 +18,32 @@ const CATEGORIES: {
   runbookId: string;
   blurb: string;
 }[] = [
-  { id: "deploy", label: "Deployment failures", runbookId: "rb-deploy-remote-node", blurb: "Cannot communicate with remote node, deploy timeouts." },
-  { id: "quality", label: "Bad quality / no data", runbookId: "rb-bad-quality", blurb: "Attribute shows Bad / Uncertain quality." },
-  { id: "ov", label: "No data in Object Viewer", runbookId: "rb-no-data-object-viewer", blurb: "Deployed but values don't update." },
-  { id: "oi", label: "OI / OPC / DI communication", runbookId: "rb-oi-opc-not-updating", blurb: "OI Server / OPC client not updating." },
-  { id: "historian", label: "Historian / historization missing", runbookId: "rb-historian-no-data", blurb: "Historized data not appearing in trends." },
-  { id: "alarms", label: "Alarms not appearing", runbookId: "rb-alarm-not-visible", blurb: "Alarm configured but never goes active." },
-  { id: "security", label: "Security / login / auth", runbookId: "rb-security-login", blurb: "Access denied, login or permission problems." },
-  { id: "checkin", label: "Check-in / out / version", runbookId: "rb-checkin-version-mismatch", blurb: "Config vs runtime mismatch, locked objects." },
-  { id: "scan", label: "Platform / AppEngine / OnScan", runbookId: "rb-onscan-offscan", blurb: "OnScan vs OffScan, nothing executing." },
-  { id: "csv", label: "Import / export / CSV", runbookId: "rb-csv-import-conflict", blurb: "CSV / package import conflicts." },
+  { id: "deploy", label: "Fallas de despliegue", runbookId: "rb-deploy-remote-node", blurb: "Cannot communicate with remote node, timeouts de deploy." },
+  { id: "quality", label: "Bad quality / sin datos", runbookId: "rb-bad-quality", blurb: "El atributo muestra calidad Bad / Uncertain." },
+  { id: "ov", label: "Sin datos en Object Viewer", runbookId: "rb-no-data-object-viewer", blurb: "Desplegado pero los valores no se actualizan." },
+  { id: "oi", label: "Comunicación OI / OPC / DI", runbookId: "rb-oi-opc-not-updating", blurb: "OI Server / cliente OPC no se actualiza." },
+  { id: "historian", label: "Historian / falta historización", runbookId: "rb-historian-no-data", blurb: "Datos historizados no aparecen en tendencias." },
+  { id: "alarms", label: "Alarmas no aparecen", runbookId: "rb-alarm-not-visible", blurb: "Alarma configurada pero nunca se activa." },
+  { id: "security", label: "Seguridad / login / auth", runbookId: "rb-security-login", blurb: "Access denied, problemas de login o permisos." },
+  { id: "checkin", label: "Check-in / out / versión", runbookId: "rb-checkin-version-mismatch", blurb: "Desajuste config vs runtime, objetos bloqueados." },
+  { id: "scan", label: "Platform / AppEngine / OnScan", runbookId: "rb-onscan-offscan", blurb: "OnScan vs OffScan, nada se ejecuta." },
+  { id: "csv", label: "Import / export / CSV", runbookId: "rb-csv-import-conflict", blurb: "Conflictos de import de CSV / package." },
+  { id: "omi", label: "OMI / ViewApp", runbookId: "rb-omi-viewapp-deploy", blurb: "ViewApp no despliega o no carga en la estación." },
 ];
 
 type EnvAnswer = "lab" | "prod" | "unsure";
 type TriggerAnswer = "reboot" | "change" | "always" | "unsure";
 
 const ENV_Q = [
-  { id: "lab", label: "Single-node lab / test" },
-  { id: "prod", label: "Multi-node production" },
-  { id: "unsure", label: "Not sure" },
+  { id: "lab", label: "Lab / prueba de un nodo" },
+  { id: "prod", label: "Producción multi-nodo" },
+  { id: "unsure", label: "No estoy seguro" },
 ];
 const TRIGGER_Q = [
-  { id: "reboot", label: "After a reboot / restart" },
-  { id: "change", label: "After a config change / deploy" },
-  { id: "always", label: "It never worked" },
-  { id: "unsure", label: "Not sure / intermittent" },
+  { id: "reboot", label: "Tras un reinicio" },
+  { id: "change", label: "Tras un cambio de config / deploy" },
+  { id: "always", label: "Nunca funcionó" },
+  { id: "unsure", label: "No sé / intermitente" },
 ];
 
 function contextNote(
@@ -52,19 +53,19 @@ function contextNote(
   const notes: string[] = [];
   if (env === "prod")
     notes.push(
-      "Multi-node production: verify name resolution, firewall and time sync between nodes, and avoid disruptive live changes during running operations — make changes in a controlled window."
+      "Producción multi-nodo: verifica la resolución de nombres, el firewall y la sincronización horaria entre nodos, y evita cambios disruptivos en vivo durante la operación — haz los cambios en una ventana controlada."
     );
   if (env === "lab")
     notes.push(
-      "Single-node lab: most communication issues here reduce to services, scan state, or references on the one node rather than network/AD."
+      "Lab de un nodo: la mayoría de los problemas de comunicación aquí se reducen a servicios, scan state o referencias en ese único nodo, más que a red/AD."
     );
   if (trig === "reboot")
     notes.push(
-      "Started after a reboot: a very common cause is engines left OffScan — set each AppEngine OnScan first, then re-check."
+      "Empezó tras un reinicio: una causa muy común es que los engines quedaron OffScan — pon cada AppEngine OnScan primero y vuelve a revisar."
     );
   if (trig === "change")
     notes.push(
-      "Started after a change/deploy: confirm the object is checked in and the deployed version matches the configuration before deeper diagnosis."
+      "Empezó tras un cambio/deploy: confirma que el objeto tiene check in y que la versión desplegada coincide con la configuración antes de un diagnóstico más profundo."
     );
   return notes.length ? notes.join(" ") : undefined;
 }
@@ -88,9 +89,9 @@ export default function TroubleshootPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Troubleshoot mode"
-        title="Guided troubleshooting"
-        subtitle="Pick a symptom category and answer two quick scoping questions. ArchestrAide assembles a checklist-style diagnostic path tailored to your environment, with sources and escalation criteria."
+        eyebrow="Modo Troubleshooting"
+        title="Troubleshooting guiado"
+        subtitle="Elige una categoría de síntoma y responde dos preguntas rápidas de contexto. ArchestrAide arma una ruta de diagnóstico tipo checklist adaptada a tu entorno, con fuentes y criterios de escalamiento."
       />
 
       <Stepper step={step} />
@@ -129,7 +130,7 @@ export default function TroubleshootPage() {
       {/* Step 1: environment */}
       {step === 1 && (
         <Question
-          title="What kind of environment is this?"
+          title="¿Qué tipo de entorno es?"
           options={ENV_Q}
           onPick={(id) => {
             setEnv(id as EnvAnswer);
@@ -142,7 +143,7 @@ export default function TroubleshootPage() {
       {/* Step 2: trigger */}
       {step === 2 && (
         <Question
-          title="When did the problem start?"
+          title="¿Cuándo empezó el problema?"
           options={TRIGGER_Q}
           onPick={(id) => {
             setTrig(id as TriggerAnswer);
@@ -172,13 +173,13 @@ export default function TroubleshootPage() {
 
           <div className="flex flex-wrap gap-3">
             <button onClick={reset} className="btn btn-ghost">
-              Start over
+              Empezar de nuevo
             </button>
             <Link
               href={`/ask?q=${encodeURIComponent(rb.title)}`}
               className="btn btn-primary"
             >
-              <IconChat width={16} height={16} /> Ask a follow-up
+              <IconChat width={16} height={16} /> Preguntar seguimiento
             </Link>
           </div>
         </div>
@@ -188,7 +189,7 @@ export default function TroubleshootPage() {
 }
 
 function Stepper({ step }: { step: number }) {
-  const labels = ["Symptom", "Environment", "Trigger", "Diagnosis"];
+  const labels = ["Síntoma", "Entorno", "Disparador", "Diagnóstico"];
   return (
     <div className="mb-6 flex items-center gap-2">
       {labels.map((l, i) => (
@@ -247,7 +248,7 @@ function Question({
         </div>
       </div>
       <button onClick={onBack} className="btn btn-ghost mt-4">
-        ← Back
+        ← Atrás
       </button>
     </div>
   );
