@@ -1,331 +1,48 @@
-# Driver Fatigue Detection with Gesture-Based Activation
+# ArchestrAide
 
-Computer-vision system that monitors driver fatigue, but only after the driver
-performs a predefined gesture sequence to activate it. Final project for the
-Computer Vision course.
+### Copilot de Soporte para AVEVA Application Server & OMI
 
-## What this project does
+ArchestrAide es un copilot interno de soporte, **fundamentado en recuperación**
+(retrieval-grounded), para equipos de ingeniería y soporte que trabajan con
+**AVEVA Application Server, OMI y System Platform**. Ofrece respuestas
+estructuradas y citadas, troubleshooting guiado, runbooks, búsqueda de
+documentación, glosario, carga de manuales propios y aportes de la comunidad.
 
-1. Camera watches the driver. System is **inactive** by default.
-2. Driver performs gesture sequence: **open palm → thumbs up** within a
-   5-second activation window (configurable via `--window-s`). A state
-   machine on top of a per-frame gesture classifier handles the activation;
-   if the second gesture doesn't arrive in time the system resets to IDLE.
-3. Once activated, a face-feature predictor classifies the driver as
-   **alert / drowsy / yawning** from the last few seconds of MediaPipe
-   blendshapes (eye blink, look-down, jaw, head pose, mouth aspect ratio).
-4. Persistent drowsiness or yawning triggers an on-screen alert overlay.
+> Internal, retrieval-grounded AI support copilot for AVEVA Application Server /
+> OMI / System Platform. UI in Spanish; AVEVA concept/tool names kept in English.
 
-## Approach — hybrid (classical + modern) pipelines
+## 🌐 Demo en vivo
 
-We implement two pipelines for **each** task and compare them head-to-head on
-leave-one-person-out (LOSO) cross-validation:
+- **Netlify:** https://archestraid.netlify.app
 
-| Component         | Classical                                          | Modern                                       |
-|-------------------|----------------------------------------------------|----------------------------------------------|
-| Hand detection    | MediaPipe Hands                                    | MediaPipe Hands                              |
-| Gesture classify  | 21-landmark feature vector + SVM / Random Forest   | MobileNetV3-Small CNN on 96×96 hand crops    |
-| Face landmarks    | MediaPipe FaceLandmarker (blendshapes + pose)      | MediaPipe FaceLandmarker                     |
-| Fatigue classify  | Per-frame SVM / RF + clip aggregation              | 1D Temporal-CNN on per-frame feature seqs    |
-| Activation logic  | State machine (same for both)                      | State machine (same for both)                |
+## 📁 La aplicación
 
-In addition to the trained pipelines we ship data-free baselines for **both**
-tasks (same design philosophy: when the dataset only has 2 subjects, geometric
-rules generalise better than overfit classifiers):
-
-* **Gesture heuristic** (`src/gestures/heuristic.py`) — open_palm / thumbs_up /
-  negative from MediaPipe finger-extension ratios + finger-up tests. Used as
-  the **realtime activation default** because the trained SVM/CNN collapse to
-  "negative" on unseen subjects.
-* **Fatigue heuristic** — data-free rule on `eyeBlink{Left,Right}` mean and
-  `jawOpen` 90th percentile (no parameters fit on our data).
-* **Fatigue aggregate-clf** — small Random Forest over 15 hand-engineered
-  clip-level statistics (Stage 5E). Used as the **fatigue deployment default**
-  because it is the best *trained* model and produces calibrated probabilities
-  suitable for an alert threshold.
-* **Fatigue ensemble** — 50/50 probability blend of heuristic + aggregate-clf.
-  Shipped but not selected as the default (LOSO numbers below).
-
-## Final LOSO results
-
-Leave-one-person-out across the 2 subjects, mean unweighted across folds. Full
-breakdown in `outputs/reports/summary.md`.
-
-### Gesture activation (end-to-end, with state machine)
-
-| Pipeline                          | Precision | Recall | F1     | Accuracy |
-|-----------------------------------|----------:|-------:|-------:|---------:|
-| **Classical (SVM + state machine)** | 0.788     | 0.867  | **0.825** | 0.927    |
-| Modern (CNN + state machine)      | 0.719     | 0.767  | 0.742  | 0.893    |
-
-→ Classical wins on this task. The per-frame CNN underperforms because the
-hand-crop dataset is too small for a 1.7M-param network and per-frame label
-noise dominates.
-
-### Fatigue detection (per-clip macro-F1)
-
-| Model                              | acc p1 | acc p2 | F1 p1 | F1 p2 | mean acc | mean F1 |
-|------------------------------------|-------:|-------:|------:|------:|---------:|--------:|
-| RF + window-vote (classical)       | 0.776  | 0.610  | 0.527 | 0.482 | 0.693    | 0.504   |
-| Temporal-CNN (modern, augmented)   | 0.869  | 0.819  | 0.866 | 0.793 | 0.844    | 0.830   |
-| Heuristic (rule-based, data-free)  | 0.897  | 0.876  | 0.893 | 0.862 | 0.887    | **0.877** |
-| **Aggregate-clf (deployment)**     | 0.935  | 0.819  | 0.935 | 0.817 | 0.877    | **0.876** |
-| Ensemble (heur + agg-clf)          | 0.916  | 0.800  | 0.903 | 0.782 | 0.858    | 0.843   |
-
-Key findings:
-
-* Adding **clip-level temporal aggregation** is what closes the gap — the
-  per-frame classical model scores F1=0.504, but giving any model 15 summary
-  statistics over a clip pushes it past 0.87.
-* The **augmented temporal CNN** (Gaussian feature noise + temporal jitter +
-  channel dropout, all train-time only) jumps from F1=0.714 → 0.830 over the
-  un-augmented baseline.
-* The data-free heuristic edges out the trained models by a hair on macro-F1
-  and is impossible to overfit, so we keep it as a sanity check; the
-  aggregate-clf matches it on F1 with smoother probabilities and is the
-  default for the realtime demo.
-
-### Figures
-
-All figures are auto-regenerated by `scripts/make_figures.py`:
-
-* `outputs/figures/fatigue_clip_macro_f1_classical_vs_cnn.png` — five-way
-  per-clip F1 comparison
-* `outputs/figures/fatigue_clip_confusion_aggregate_pooled.png` — pooled
-  confusion for the deployment model
-* `outputs/figures/fatigue_clip_confusion_temporal_cnn_pooled.png` — modern
-  CNN, augmented
-* `outputs/figures/gesture_sequence_activation_f1_classical_vs_cnn.png` —
-  end-to-end gesture activation
-* `outputs/figures/dataset_class_counts_*.png` —
-  dataset distributions
-
-## Setup
-
-Requires **Python 3.12** on macOS (tested on Apple Silicon M3 with MPS).
+Todo el código de la app vive en **[`archestraide/`](./archestraide)** (Next.js 14
++ TypeScript + Tailwind). Consulta **[`archestraide/README.md`](./archestraide/README.md)**
+para la arquitectura, cómo correrla localmente, las variables de entorno, el
+modelo de fundamentación/seguridad y la guía de ingesta de manuales.
 
 ```bash
-git clone https://github.com/javronich1/cv-driver-fatigue-detection.git
-cd cv-driver-fatigue-detection
-
-python3.12 -m venv .venv
-source .venv/bin/activate
-
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Place the dataset (gitignored). Copy/symlink your `dataset/` folder
-# into the project root with `fatigue/` and `gestures/` subfolders.
+cd archestraide
+npm install
+npm run dev     # http://localhost:3000
 ```
 
-## Reproducing the results
+## 🚀 Despliegue
 
-End-to-end (a few minutes total on M3):
+El sitio se despliega como **export estático** en Netlify (config en
+[`netlify.toml`](./netlify.toml)). La app funciona 100% del lado del cliente
+(recuperación + composición de respuestas fundamentadas), por lo que el deploy
+es completamente funcional sin backend. Si se configura una `ANTHROPIC_API_KEY`,
+la ruta opcional `/api/ask` añade síntesis de respuestas con Claude.
 
-```bash
-# Stage 1: dataset inventory.
-python scripts/inventory.py
+## ✨ Capacidades
 
-# Stage 2 (gestures, classical): per-frame features → SVM/RF, then end-to-end.
-python scripts/extract_gesture_features.py
-python scripts/train_gesture_classical.py
-python scripts/eval_gesture_sequence.py --model svm
-
-# Stage 3 (gestures, modern): hand-crop CNN.
-python scripts/extract_hand_crops.py
-python scripts/train_gesture_cnn.py
-python scripts/eval_gesture_sequence.py --model cnn
-
-# Stage 4 (fatigue, classical): per-frame features → SVM/RF + clip aggregation.
-python scripts/extract_fatigue_features.py
-python scripts/train_fatigue_classical.py
-
-# Stage 5A — modern temporal CNN (with augmentation).
-python scripts/train_fatigue_temporal_cnn.py
-
-# Stage 5D — heuristic baseline (no training; LOSO eval only).
-python scripts/eval_fatigue_heuristic.py
-
-# Stage 5E — clip-aggregate classifier (deployment model).
-python scripts/train_fatigue_aggregate.py
-
-# Stage 5F — deployment ensemble.
-python scripts/eval_fatigue_ensemble.py
-
-# Stage 6 — master tables and figures (writes summary.md/.txt + all figures).
-python scripts/make_summary.py
-python scripts/make_figures.py
-```
-
-## Technical report
-
-> **📄 Full write-up:** [`docs/CV_report.pdf`](docs/CV_report.pdf) — Group 4
-> technical report (system overview, dataset, feature extraction, gesture
-> activation, fatigue detection, real-time system, discussion).
-
-## Realtime demo
-
-> **📹 Demonstration videos**
->
-> * [`docs/realtime_demo.mp4`](docs/realtime_demo.mp4) — full live
->   webcam session: gesture activation (OPEN PALM → THUMBS UP) followed
->   by the fatigue detector reacting in real time.
-> * [`docs/smoke_tests/`](docs/smoke_tests/) — system run on five
->   in-car fatigue clips from the dataset (gesture stage skipped via
->   `--skip-activation`). Per-frame labels (majority over the clip):
->
->   | clip | expected | detected | rate |
->   |------|----------|----------|------|
->   | [alert](docs/smoke_tests/alert.mp4)                 | alert   | alert   | 95 / 95  (100 %) |
->   | [yawning](docs/smoke_tests/yawning.mp4)             | yawning | yawning | 49 / 49  (100 %) |
->   | [eyes_closed](docs/smoke_tests/eyes_closed.mp4)     | drowsy  | drowsy  | 94 / 94  (100 %) |
->   | [head_drooping](docs/smoke_tests/head_drooping.mp4) | drowsy  | drowsy  | 89 / 95  ( 94 %) |
->   | [microsleep](docs/smoke_tests/microsleep.mp4)       | drowsy  | drowsy  | 93 / 93  (100 %) |
-
-**This is the only command you need to run the system end-to-end.** Everything
-else in this README (per-stage trainers, eval scripts, figure generators) is
-for reproducing the report numbers, not for running the system.
-
-```bash
-python scripts/run_realtime.py
-```
-
-Defaults: heuristic gesture classifier, aggregate-clf fatigue model. Opens your
-webcam, shows the HUD, and starts in WAITING state.
-
-**Activation flow (rubric requirement):**
-
-1. Sit roughly straight-on to the camera.
-2. Show an **OPEN PALM** for ~1 s. Banner switches to `step 1/2 ✓ now show
-   THUMBS UP`.
-3. Show a **THUMBS UP** within **5 seconds** (the activation window). Banner
-   switches to `ACTIVE`. If you take longer than 5 s the state machine resets
-   to IDLE and you have to start over from the open palm.
-4. Once active, close your eyes / yawn / look down — the fatigue label reacts
-   in real time and an on-screen alarm appears after the alert label persists
-   for 1.5 s.
-5. Press `q` to quit.
-
-To save the demo to MP4 for the report:
-
-```bash
-python scripts/run_realtime.py --output outputs/figures/realtime_demo.mp4
-```
-
-<details>
-<summary>Optional variants (recreational — not needed for the rubric)</summary>
-
-```bash
-# Try the other fatigue models (gesture activation works the same):
-python scripts/run_realtime.py --fatigue-model heuristic
-python scripts/run_realtime.py --fatigue-model temporal_cnn
-python scripts/run_realtime.py --fatigue-model ensemble
-
-# Drive the trained gesture classifiers (they overfit to the 2 training
-# subjects so live use is flaky — included only for the LOSO comparison):
-python scripts/run_realtime.py --gesture-model svm --lenient
-python scripts/run_realtime.py --gesture-model cnn --lenient
-
-# Process a pre-recorded clip instead of the webcam:
-python scripts/run_realtime.py \
-    --video dataset/fatigue/yawning/some_clip.mp4 \
-    --output outputs/figures/realtime_demo_yawn.mp4
-
-# Process a fatigue clip that has no gesture sequence (smoke tests):
-python scripts/run_realtime.py \
-    --video dataset/fatigue/microsleep/person1_microsleep_1.mp4 \
-    --skip-activation \
-    --output docs/smoke_tests/microsleep.mp4
-
-# Tighter / looser activation window:
-python scripts/run_realtime.py --window-s 3.0    # 3-second window
-python scripts/run_realtime.py --window-s 10.0   # 10-second window
-```
-
-</details>
-
-CLI flags:
-
-| Flag                     | Default          | What it does                                                |
-|--------------------------|------------------|-------------------------------------------------------------|
-| `--fatigue-model`        | `aggregate_clf`  | One of `aggregate_clf`, `heuristic`, `temporal_cnn`, `svm`, `rf`, `ensemble`. |
-| `--gesture-model`        | `heuristic`      | One of `heuristic` (data-free landmark geometry, default), `svm`, `cnn`. The trained classifiers collapse to "negative" on unseen subjects (only 2 training subjects), so the demo defaults to the heuristic. |
-| `--cam`                  | `0`              | Webcam device index.                                        |
-| `--video PATH`           | (off)            | Process a pre-recorded clip instead of the webcam.          |
-| `--output PATH`          | (off)            | Write the annotated video to MP4.                           |
-| `--alert-confidence`     | `0.55`           | Min fatigue probability to count as an alert frame.         |
-| `--alert-persist`        | `1.5`            | Seconds in the alert class before raising the on-screen alarm. |
-| `--min-confidence`       | `0.60`           | Min per-frame gesture probability to count toward activation. |
-| `--min-consecutive`      | `3`              | Consecutive in-window frames of the same gesture before it is accepted. |
-| `--window-s`             | `5.0`            | **Rubric requirement:** seconds allowed between OPEN PALM and THUMBS UP before the state machine resets to IDLE. |
-| `--negative-discount`    | `0.35`           | (Trained gesture models only) Multiplier on the `negative` probability once a hand has been detected. Compensates for "no hand" frames being bundled into the training `negative` class. |
-| `--lenient`              | (off)            | Even looser thresholds (`min_confidence=0.25`, `min_consecutive=2`, `window_s=8`) for hard-to-detect gestures. |
-| `--skip-activation`      | (off)            | Pre-activate the state machine and go straight to fatigue monitoring. Used to process dataset clips that don't contain the gesture sequence (see smoke tests above). |
-
-> **Why a heuristic gesture model?** The trained SVM/CNN gesture classifiers
-> are part of the report's hybrid comparison and reach ~80 % LOSO macro-F1,
-> but with only **2 training subjects** they overfit hard: on a third subject
-> the SVM outputs `negative ≈ 0.99` on a clearly-held-up palm. The heuristic
-> uses pure landmark geometry (finger extension ratios + finger-up tests) so
-> it generalises to any hand without training data, and it's the same design
-> philosophy as our `--fatigue-model heuristic`. Use `--gesture-model svm` or
-> `cnn` to drive the trained pipelines for the LOSO comparison.
-
-## Project structure
-
-```
-CV_FINAL_PROJECT/
-├── dataset/                  # raw videos (gitignored; copy locally)
-│   ├── fatigue/
-│   └── gestures/
-├── data_processed/           # extracted frames / hand crops (gitignored)
-├── outputs/
-│   ├── models/               # trained .joblib / .pt artefacts
-│   ├── reports/              # CSV + txt evaluation dumps + summary.md
-│   └── figures/              # report-ready PNGs
-├── src/
-│   ├── config.py
-│   ├── data/                 # loading, splits, frame/crop extraction
-│   ├── gestures/             # classical + CNN + heuristic gesture pipelines
-│   │   ├── classical.py      # SVM/RF on 74-D landmark features
-│   │   ├── cnn.py            # MobileNetV3-Small on 96×96 hand crops
-│   │   ├── heuristic.py      # data-free landmark-geometry classifier (deploy)
-│   │   ├── features.py       # 74-D landmark feature extractor
-│   │   ├── landmarks.py      # MediaPipe HandLandmarker wrapper
-│   │   └── state_machine.py  # gesture activation FSM (open_palm → thumbs_up)
-│   ├── fatigue/
-│   │   ├── features.py       # 24-D per-frame face features
-│   │   ├── classical.py      # SVM/RF over per-frame features + clip agg.
-│   │   ├── temporal_cnn.py   # 1D temporal CNN + augmentation
-│   │   └── aggregate.py      # 15 hand-engineered clip-level statistics
-│   ├── system/
-│   │   └── realtime.py       # webcam demo + heuristic + ensemble predictors
-│   └── utils/
-├── scripts/                  # everything in `Reproducing the results`
-├── tests/
-└── README.md
-```
-
-## Dataset
-
-Two subjects, single recording session, in-car-style framing. External datasets
-(UTA-RLDD, NTHU-DDD, MRL Eye, YawDD) were not used in the final results — every
-number above is on our own captured data. With only two subjects the LOSO
-splits are unavoidably noisy, which is why we report per-fold accuracy and F1
-rather than only pooled numbers.
-
-```
-dataset/
-├── fatigue/
-│   ├── alert/  alert looking/  calibration/  eyes closed/  fatigue face/
-│   ├── head drooping/  head tilting/  microsleep/  phone/  slow blinks/
-│   ├── talking/  transition/  yawning/
-└── gestures/
-    ├── correct sequence/  incomplete/  no hands/  open palm/
-    ├── random hands/  thumbs up/  too slow/  wrong sequence/
-```
-
-## Authors
-
-CV course final project, Group 4
-Gonzalo Fernandez de Cordoba, Mia Dragovic, Leena El Barq, Omar El Hajj, Ruben Grande
+- **Preguntar** — respuestas estructuradas y citadas (concepto vs troubleshooting).
+- **Troubleshooting** — asistente guiado tipo checklist con avisos por entorno.
+- **Runbooks** — playbooks de soporte para Application Server y OMI.
+- **Docs / Buscar** — búsqueda híbrida sobre todo el conocimiento.
+- **Manuales** — sube tus PDFs de capacitación (se procesan en el navegador).
+- **Comunidad** — aporta problemas/soluciones, guardados como GitHub Issues y
+  compartidos con todos.
+- **Glosario** y **Problemas conocidos**.

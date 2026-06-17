@@ -4,15 +4,13 @@ name: Deploy ArchestrAide to GitHub Pages
 # it to GitHub Pages. The app works fully client-side, so the optional /api/ask
 # serverless route is removed for the static build and the client falls back to
 # the deterministic grounded answer composer.
+#
+# NOTE: The primary deploy is Netlify (see netlify.toml). This Pages workflow is
+# manual-only (workflow_dispatch) so it doesn't post failing runs on every push;
+# enable GitHub Pages (Settings → Pages → Source: GitHub Actions) and run it from
+# the Actions tab if you also want a github.io URL.
 
 on:
-  push:
-    branches:
-      - main
-      - claude/archestraaide-aveva-copilot-qle9dj
-    paths:
-      - "archestraide/**"
-      - ".github/workflows/deploy-archestraide.yml"
   workflow_dispatch:
 
 permissions:

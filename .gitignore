@@ -1,54 +1,9 @@
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# OS
+# Dependencies / build output live under archestraide/ (see its own .gitignore)
+node_modules/
+.next/
+out/
 .DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# Project-specific: heavy data, models, outputs
-dataset/
-external_datasets/
-outputs/
-models/
-*.pt
-*.pth
-*.h5
-*.pkl
-*.joblib
-*.onnx
-*.task
-
-# Frames extracted from videos (regenerable)
-data_processed/
-
-# Logs
-*.log
-runs/
-wandb/
-
-# Secrets
 .env
-credentials.json
-token.json
+.env*.local
+.netlify
+*.tsbuildinfo
